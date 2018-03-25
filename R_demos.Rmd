@@ -1,0 +1,480 @@
+---
+title: 'Performing Extreme Value Analysis (EVA) using R'
+author: "Whitney Huang"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    fig_width: 8.5
+    fig_height: 6
+    fig_caption: yes
+    css: rmarkdown.css
+#header-includes:
+   #- \usepackage{animate}  
+---
+
+#Data: Fort Collins daily precipitation
+
+We will analyze the daily precipitation amounts (inches) in Fort Collins, Colorado from 1900 to 1999. (Source Colorado Climate Center, Colorado State University <http://ulysses.atmos.colostate.edu>.) 
+
+##Read the data
+
+```{r load, message=FALSE}
+# Install the packages for this demos
+#install.packages(c("extRemes", "scales", "dplyr", "ismev"))
+library(extRemes) # Load the extRemes package for performing EVA 
+data(Fort) # Load the preciptation data (it is a built-in data sets in extRemes)
+head(Fort) # Look at the first few observations 
+tail(Fort) # Look at the last few observations
+str(Fort)  # Look at the structure of the data set
+```
+
+##Plot the data
+```{r, message=FALSE, fig.height=5, fig.width=10}
+# Set up the time format
+days_year <- table(Fort$year)
+time_year <- Fort$tobs / rep.int(days_year, times = days_year)
+time      <- Fort$year + time_year
+
+# Plot the spatial location of Fort Collins and the daily precip time series
+par(mfrow = c(2, 1))
+library(maps) # Load the package for map drawing
+map("state", col = "gray", mar = rep(0, 4))
+# Fort Collins, Lat Long Coordinates: 40.5853° N, 105.0844° W
+points(-105.0844, 40.5853, pch = "*", col = "red", cex = 1.5)
+par(las = 1, mar = c(5.1, 4.1, 1.1, 2.1))
+plot(time, Fort$Prec, type = "h",
+     xlab = "Time (Year)",
+     ylab = "Daily precipitation (in)")
+
+# Zoom in to look at seasonal variation
+par(mfrow = c(1, 2), mar = c(5.1, 4.1, 4.1, 0.6))
+id <- which(Fort$year %in% 1999) # Look at year 1999
+par(las = 1)
+# Plot the 1999 daily precip time series 
+plot(1:365, Fort$Prec[id], type = "h",
+     xlab = " ",
+     ylab = "Daily precipitation (in)",
+     xaxt = "n", ylim = c(0, max(Fort$Prec)),
+     main = "1999")
+par(las = 3)
+axis(1, at = seq(15, 345, 30), labels = month.abb)
+
+
+Leaf_Day <- seq(1520, 1520 + 1460 * 23, 1460)
+
+par(las = 1)
+library(scales) # Load the scales pacakge to modify color transparency
+# Plot the daily precip as a function of the day of the year
+plot(rep(1:365, 100), Fort$Prec[-Leaf_Day], pch = 1,
+     col = alpha("blue", 0.25), cex = 0.5,
+     xaxt = "n", xlab = " ", ylab = " ", main = "1900 ~ 1999",
+     ylim = c(0, max(Fort$Prec)))
+par(las = 3)
+axis(1, at = seq(15, 345, 30), labels = month.abb)
+
+# Define "summer" and "winter" daily precip 
+summer <- which(Fort$month %in% 6:8)
+winter <- which(Fort$month %in% c(12, 1, 2))
+prec_summer <- Fort$Prec[summer]
+prec_winter <- Fort$Prec[winter]
+
+# Plot the histograms for summer and winter non-zero daily precip
+par(mfrow = c(1, 2), mar = c(5.1, 4.1, 4.1, 1.1))
+max_precip <- max(prec_summer, prec_winter)
+brk <- seq(0, max_precip, length.out = 60)
+
+hist(prec_summer[prec_summer > 0], breaks = brk, col = alpha("red", 0.5),
+     prob = T, xlim = c(0, max_precip), xlab = "Summer (JJA) prec (in)",
+     ylab = "Density", main = "", ylim = c(0, 8))
+rug(prec_summer, col = "red", lwd = 0.5)
+hist(prec_winter[prec_winter > 0], breaks = brk, col = alpha("blue", 0.5),
+     prob = T, xlim = c(0, max_precip), xlab = "Winter (DJF) prec (in)",
+     ylab = " ", main = "", ylim = c(0, 8))
+rug(prec_winter, col = "blue", lwd = 0.5)
+```
+
+
+##Summarize the data
+```{r, message=FALSE}
+# Six number summary for summer and winter daily precip
+summary(prec_summer)
+summary(prec_winter)
+
+# Variation
+sd(prec_summer)
+sd(prec_winter)
+IQR(prec_summer)
+IQR(prec_winter)
+
+# Chance of rain
+length(prec_summer[prec_summer > 0]) /  length(prec_summer)
+length(prec_winter[prec_winter > 0]) /  length(prec_winter)
+```
+
+
+# EVA: Block Maxima Approach
+We are going to conduct an extreme value analysis using the `extRemes` package developed and maintained by `Eric Gilleland`. In the previous lecture we learned the `block maxima method` and `threshold exceedances method` for doing EVA. Let's see how that works in `R`. 
+
+## Step I: Determine the block size and compute maxima for blocks
+
+```{r, message=FALSE}
+library(dplyr)
+grouped_summer <- group_by(Fort[summer, ], year)
+# Extracting summer maxima and the timings when the maxima occur
+summer_max <- summarise(grouped_summer, prec = max(Prec), t = which.max(Prec))
+summer_max
+```
+Let's plot the summer maxima
+```{r, message=FALSE}
+# Setting up the figure configuration
+old.par <- par(no.readonly = TRUE)
+mar.default <- par("mar")
+mar.left <- mar.default
+mar.right <- mar.default
+mar.left[2] <- 0
+mar.right[4] <- 0
+
+# Time series plot
+par(fig = c(0.2, 1, 0, 1), mar = mar.left)
+plot(1900 + 1:9200 / 92, prec_summer,
+      xlab = "Year", ylab = "",
+      main = "Summer Maximum \n Fort Collins",
+      type = "h", pch = 19, cex = 0.5, col = "lightblue",
+      ylim = c(0, max_precip), yaxt = "n")
+par(las = 2)
+axis(4, at = 0:5)
+par(las = 0)
+mtext("Precipitation (in)", side = 2, line = 4)
+abline(v = 1900:2000, col = "gray", lty = 2)
+points(1900:1999 + summer_max$t / 90, summer_max$prec,
+       pch = 16, col = "blue", cex = 0.5)
+
+# Histogram
+hs <- hist(summer_max$prec,
+           breaks = seq(0, max_precip, length.out = 40),
+           plot = FALSE)
+par(fig = c(0, 0.2, 0, 1.0), mar = mar.right, new = T)
+plot (NA, type = 'n', axes = FALSE, yaxt = 'n',
+      col = rgb(0, 0, 0.5, alpha = 0.5),
+      xlab = "Density", ylab = NA, main = NA,
+      xlim = c(-max(hs$density), 0),
+      ylim = c(0, max_precip))
+axis(1, at = c(-0.8, -0.4, 0), c(0.8, 0.4, 0), las = 2)
+arrows(rep(0, length(hs$breaks[-40])), hs$breaks[-40],
+       -hs$density, hs$breaks[-40], col = "blue",
+       length = 0, angle = 0, lwd = 1)
+arrows(rep(0, length(hs$breaks[-1])), hs$breaks[-1],
+       -hs$density, hs$breaks[-1], col = "blue",
+       length = 0, angle = 0, lwd = 1)
+arrows(-hs$density, hs$breaks[-40], -hs$density,
+       hs$breaks[-1], col = "blue", angle = 0,
+       length = 0)
+
+mle <- fevd(summer_max$prec)$results$par
+xg <- seq(0, max_precip, length.out = 100)
+library(ismev)
+lines(-gev.dens(mle, xg), xg, col = "red") 
+par(old.par)
+
+```
+
+
+
+## Step II: Fit a GEV to the maxima and assess the fit
+<!-- We assume $m_{1}, \cdots, m_{t}$ follows a GEV distribution $GEV(\mu_{n}, \sigma_{n}, \xi)$ and we maximize the log-likelihood  -->
+<!-- $$-\sum_{i=1}^{t} y_{i}^{-\frac{1}{\xi}}- t log(\sigma) - (\frac{1}{\xi}+1)\sum_{i=1}^{t}log(y_{i})$$ -->
+<!-- where $y_{i} = \left[1-\xi \frac{m_{i}-\mu}{\sigma}\right]_{+}$ -->
+
+```{r, message=FALSE, fig.height=8, fig.width=9}
+# Fit a GEV to summer maximum daily precip using MLE
+gevfit <- fevd(summer_max$prec)
+# Print the results 
+gevfit
+#QQ plot
+p <- 1:100 / 101
+qm <- gevq(mle, 1 - p)
+plot(qm, sort(summer_max$prec), xlim = c(0, 5), ylim = c(0, 5),
+     pch = 16, cex = 0.5, col = alpha("blue", 0.5),
+     xlab = "Model", ylab = "Empirical", main = "Quantile Plot")
+abline(0, 1, lwd = 1.5)
+```
+
+
+## Step III: Perform inference for return levels
+Suppose we are interested in estimating 100-year return level
+
+```{r, fig.height=8, fig.width=9, message=FALSE}
+RL100 <- return.level(gevfit, return.period = 100) # Estimate of the 100-year event
+RL100
+# Quantify the estimate uncertainty
+## Delta method
+CI_delta <- ci(gevfit, return.period = 100, verbose = T) 
+CI_delta
+## Profile likelihood method
+CI_prof <- ci(gevfit, method = "proflik", xrange = c(2.5, 8),
+   return.period = 100, verbose = F)
+CI_prof 
+
+
+hist(summer_max$prec, breaks = seq(0, max_precip, length.out = 35),
+     col = alpha("lightblue", 0.2), border = "gray",
+     xlim = c(0, 8), prob = T, ylim = c(0, 1.2),
+     xlab = "summer max (in)",
+     main = "95% CI for 100-yr RL")
+xg <- seq(0, 8, len = 1000)
+mle <- gevfit$results$par
+lines(xg, gev.dens(mle, xg), lwd = 1.5)
+#for (i in 1:3) abline(v = CI_delta[i], lty = 2, col = "blue")
+for (i in c(1, 3)) abline(v = CI_prof[i], lty = 2, col = "red")
+abline(v = RL100, lwd = 1.5, lty = 2)
+#legend("topleft", legend = c("Delta CI", "Prof CI"),
+       #col = c("blue", "red"), lty = c(2, 3))
+
+```
+
+<!-- ### Temporal nonstationarity (in annual max)? -->
+
+<!-- ```{r} -->
+<!-- gevfit2 <- fevd(annmax[ ,2], data = annmax, -->
+<!--  location.fun = ~annmax[ ,1]) -->
+<!-- lr.test(gevfit1, gevfit2) -->
+<!-- ``` -->
+
+# EVA: Peak Over Threshold Approach
+
+
+
+## Step I: Pick a threshold and extract the threshold exceedances
+
+```{r}
+old.par <- par(no.readonly = TRUE)
+mar.default <- par('mar')
+mar.left <- mar.default
+mar.right <- mar.default
+mar.left[2] <- 0
+mar.right[4] <- 0
+# Time series plot
+par(fig = c(0.2, 1, 0, 1), mar = mar.left)
+
+plot(1900 + 1:9200 / 92, prec_summer, type = "h", col = "lightblue",
+     xlab = "Year", ylab = "Daily Precip (inches)", yaxt = "n")
+#Threshold exceedances
+thres <- 0.4
+ex <- prec_summer[prec_summer >= thres]
+length(ex)
+#Extract the timing of POT
+ex_t <- which(prec_summer >= thres)
+abline(h = thres, col = "blue", lty = 2)
+points(1900 + ex_t / 92, ex, col = alpha("blue", 0.5), pch = 16,
+       cex = 0.75)
+par(las = 2)
+axis(4, at = 0:5)
+par(las = 0)
+mtext("Precipitation (in)", side = 2, line = 5)
+grid()
+hs <- hist(ex, seq(thres, max_precip, len = 50), plot = FALSE)
+par(fig = c(0, 0.2, 0, 1.0), mar = mar.right, new = T)
+plot (NA, type = 'n', axes = FALSE, yaxt = 'n',
+      col = rgb(0,0,0.5, alpha = 0.5),
+      xlab = "Density", ylab = NA, main = NA,
+      xlim = c(-max(hs$density), 0),
+      ylim = c(0, max_precip))
+axis(1, at = c(-3, -2, -1, 0), c(3, 2, 1, 0), las = 2)
+#abline(h = 21, col = "red", lty = 5)
+arrows(rep(0, length(hs$breaks[-50])), hs$breaks[-50],
+       -hs$density, hs$breaks[-50], col = "blue",
+       length = 0, angle = 0, lwd = 1)
+arrows(rep(0, length(hs$breaks[-1])), hs$breaks[-1],
+       -hs$density, hs$breaks[-1], col = "blue",
+       length = 0, angle = 0, lwd = 1)
+arrows(-hs$density, hs$breaks[-50], -hs$density,
+       hs$breaks[-1], col = "blue", angle = 0,
+       length = 0)
+
+mle <- fevd(prec_summer, threshold = thres, type = "GP")$results$par
+xg <- seq(thres, max_precip, length.out = 100)
+lines(-gpd.dens(mle, thres, xg), xg, col = "red")
+par(old.par)
+```
+
+###How to choose the "right" threshold?
+
+```{r, fig.height=8, fig.width=9}
+# Mean residula life plot
+
+mrlplot(prec_summer, main = "Mean Residual Life", xlab = "Threshold (in)")
+# I choose 0.4 as the threshold but note that the "straightness"
+# is difficult to assess
+abline(v = 0.4, col = "blue", lty = 2)
+
+```
+
+
+## Step II: Fit a GPD to threshold excesses and assess the fit
+
+```{r, message=FALSE, fig.height=8, fig.width=9}
+# Fit a GPD for threshold exceenances using MLE
+gpdfit1 <- fevd(prec_summer, threshold = thres, type = "GP")
+# Print the results 
+gpdfit1
+# QQ plot
+p <- 1:344 / 345
+qm <- gpdq(mle, 0.4, 1 - p)
+plot(qm, sort(ex), xlim = c(0, 6), ylim = c(0, 6),
+     pch = 16, cex = 0.5, col = alpha("blue", 0.5),
+     xlab = "Model", ylab = "Empirical", main = "Quantile Plot")
+abline(0, 1, lwd = 1.5)
+
+
+```
+
+
+## Step III: Perform inference for return levels
+
+Again we are interested in estimating 100-year return level
+
+```{r, fig.height=8, fig.width=9}
+# Here we need to adjust the return period as here we are
+#estimating the return level for summer precip 
+RL100 <- return.level(gpdfit1, return.period = 100 * 92 / 365.25)
+RL100
+CI_delta <- ci(gpdfit1, return.period = 100 * 92 / 365.25,
+               verbose = F) 
+CI_delta
+CI_prof <- ci(gpdfit1, method = "proflik", xrange = c(3, 10),
+   return.period = 100 * 92 / 365.25, verbose = F)
+CI_prof
+
+hist(ex, 40, col = alpha("lightblue", 0.2), border = "gray",
+     xlim = c(thres, 10), prob = T, ylim = c(0, 4),
+     xlab = "Threshold excess (in)",
+     main = "95% CI for 100-yr RL")
+xg <- seq(thres, 10, len = 1000)
+mle <- gpdfit1$results$par
+lines(xg, gpd.dens(mle, thres, xg), lwd = 1.5)
+#for (i in c(1, 3)) abline(v = CI_delta[i], lty = 2, col = "blue")
+for (i in c(1,3)) abline(v = CI_prof[i], lty = 2, col = "red")
+abline(v = RL100, lwd = 1.5, lty = 2)
+#legend("topleft", legend = c("Delta CI", "Prof CI"),
+       #col = c("blue", "red"), lty = c(2, 3))
+
+
+```
+
+
+
+
+<!-- ####Decluster the exceedances -->
+
+<!-- ```{r, fig.height=8, fig.width=9} -->
+<!-- plot(366:730, FCwx$Prec[366:730], type = "l", -->
+<!--      xlab = "Month", ylab = "Daily Precip (0.01 in)", -->
+<!--      main = "1901", xaxt = "n") -->
+<!-- axis(1, at = 365 + seq(15, 345, 30), labels = month.abb) -->
+<!-- thres <- 40 -->
+<!-- ex <- FCwx$Prec[FCwx$Prec >= thres] -->
+<!-- #Extract the timing of POT -->
+<!-- ex_t <- which(FCwx$Prec >= 40) -->
+<!-- abline(h = 40, col = "blue", lty = 2) -->
+<!-- points(ex_t, ex, col = "blue", pch = 16, -->
+<!--        cex = log(ex/100 + 1)) -->
+<!-- #### -->
+<!-- declus <- decluster(FCwx$Prec, threshold = 40) -->
+<!-- plot(declus) -->
+<!-- gpdfit2 <- fevd(declus, threshold = 40, type = "GP") -->
+<!-- ``` -->
+
+<!-- ```{r, fig.height=8, fig.width=9} -->
+<!-- CI_delta <- ci(gpdfit2, return.period = 100, verbose = T)  -->
+<!-- CI_delta -->
+<!-- CI_prof <- ci(gpdfit2, method="proflik", xrange = c(300, 750), -->
+<!--    return.period = 100, verbose = TRUE) -->
+<!-- CI_prof -->
+<!-- hist(ex, 50, col = "lightblue", -->
+<!--      xlim = c(40, 700), prob = T, ylim = c(0, 0.033), -->
+<!--      xlab = "Threshold excess (0.01 in)", -->
+<!--      main = "95% CI for 50-yr RL") -->
+<!-- xg <- seq(40, 700, len = 1000) -->
+<!-- mle <- gpdfit2$results$par -->
+<!-- lines(xg, dgpd(xg, loc = 40,  -->
+<!--                scale = mle[1], shape = mle[2])) -->
+<!-- for (i in 1:3) abline(v = CI_delta[i], lty = 2, col = "blue") -->
+<!-- for (i in 1:3) abline(v = CI_prof[i], lty = 3, col = "red") -->
+<!-- legend("topleft", legend = c("Delta", "Prof"), -->
+<!--        col = c("blue", "red"), lty = c(2, 3)) -->
+
+<!-- ``` -->
+
+<!-- ##Bayes estimation -->
+<!-- ```{r} -->
+<!-- library(evdbayes) -->
+<!-- library(coda) -->
+
+<!-- #Prior covariance -->
+<!-- mat <- diag(c(1000, 1000, 100)) -->
+<!-- pn <- prior.norm(mean = c(0, 0, 0), cov = mat) -->
+
+<!-- n <- 10000  -->
+<!-- t0 <- c(100, 50, 0.1)  -->
+<!-- s <- c(2, .5, .5) -->
+
+<!-- #sample from posterior distribution -->
+<!-- Fort_prec_mc <- posterior(n, t0, prior = pn, lh = "gev", -->
+<!--                           data = annmax[,2], psd = s, burn = 1000) -->
+<!-- ### Return Level Plots -->
+<!-- #sample from prior distribution -->
+<!-- Fort_prec.prior <- posterior(n, t0, pn, "none", psd = s, burn = 0) -->
+
+<!-- rl.pst(Fort_prec.prior, lh = "gev", col = "green", -->
+<!--        xlim = c(10, 100), ylim = c(200, 1000))  -->
+<!-- rl.pst(Fort_prec_mc, lh = "gev", col = "blue", -->
+<!--        npy = 1, add = TRUE) -->
+
+<!-- Fort_prec.mcmc <- mcmc(Fort_prec_mc, start = 5000, end = 10000) -->
+<!-- plot(Fort_prec.mcmc, den = FALSE, sm = FALSE) -->
+
+<!-- #Getting initial values -->
+<!-- maxFort <- mposterior(t0, prior = pn, lh = "gev", data = annmax[ ,2],  method="Nelder-Mead") -->
+<!-- round(maxFort$par, 2) -->
+
+<!-- t0 <- round(maxFort$par, 2) -->
+<!-- psd <- rep(0.01, 3) -->
+<!-- psd <- ar.choice(init = t0, prior = pn, lh = "gev", -->
+<!--                  data = annmax[ ,2], psd = psd, -->
+<!--                  tol = rep(0.02, 3))$psd -->
+<!-- round(psd, 2) -->
+<!-- s <- round(psd, 2) -->
+
+<!-- Fortmc <- posterior(10000, init = t0, prior = pn, lh = "gev", -->
+<!--                    data = annmax[ ,2], psd = s) -->
+<!-- summary(Fortmc) -->
+<!-- plot(Fortmc) -->
+
+<!-- Fort.mcmc <- mcmc(Fortmc, start = 5000, end = 10000) -->
+<!-- plot(Fort.mcmc, den = FALSE, sm = FALSE) -->
+
+<!-- ########Diagnostics########### -->
+<!-- #Geweke: If any of the values are above 2 in absolute value,  -->
+<!-- #you may wish to increase the burn-in period and repeat the test. -->
+<!-- Fort.mcmc <- window(Fort.mcmc, start = 1000) -->
+<!-- geweke.diag(Fort.mcmc) -->
+
+<!-- raftery.diag(Fort.mcmc, s = 0.75, r=0.01) -->
+<!-- #Raftery: The final column gives the dependence factor, which is the  -->
+<!-- #ratio of the two preceding columns. The factor represents the -->
+<!-- #extent to which the autocorrelation inflates the required sample size -->
+<!-- autocorr.plot(Fort.mcmc) -->
+
+<!-- ###Cool plots -->
+<!-- bwf <- function(x) sd(x)/2 -->
+<!-- plot(Fort.mcmc, trace = FALSE, bwf = bwf) -->
+<!-- summary(Fort.mcmc) -->
+
+<!-- ``` -->
+
+
+
+
+
