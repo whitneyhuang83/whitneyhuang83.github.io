@@ -1,0 +1,64 @@
+---
+title: "STAT 8020 Lecture 2 R demo"
+author: "Whitney"
+date: "8/23/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Maximum Heart Rate vs. Age Example
+
+### First Step: Load the data
+
+```{r}
+Age <- c(18, 23, 25, 35, 65, 54, 34, 56, 72, 19, 23, 42, 18, 39, 37)
+MaxHeartRate <- c(202, 186, 187, 180, 156, 169, 174, 172, 153,
+                  199, 193, 174, 198, 183, 178)
+dat <- read.csv("maxHeartRate.csv", header = T)
+attach(dat)
+```
+
+
+### "Hand" calculation
+
+```{r}
+Y_diff <- MaxHeartRate - mean(MaxHeartRate)
+X_diff <- Age - mean(Age)
+beta_1_ls <- sum(Y_diff * X_diff) / sum((X_diff)^2)
+beta_1_ls
+beta_0_ls <- mean(MaxHeartRate) - mean(Age) * beta_1_ls
+beta_0_ls
+Y_hat <- beta_0_ls + beta_1_ls * Age
+Y_hat
+sigma2_ls <- sum((MaxHeartRate - Y_hat)^2) / (length(Age) - 2)
+sqrt(sigma2_ls)
+```
+
+
+### Let R do all the work
+
+```{r}
+
+fit <- lm(MaxHeartRate ~ Age)
+summary(fit)
+anova(fit)
+```
+
+### Residual plots
+
+```{r}
+plot(fit)
+```
+
+
+
+
+
+
+
+
+
+
