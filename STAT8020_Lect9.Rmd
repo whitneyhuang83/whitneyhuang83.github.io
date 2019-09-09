@@ -1,0 +1,107 @@
+---
+title: "STAT 8020 Lecture 9 R demo"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    fig_width: 8.5
+    fig_height: 8
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## General Linear Test
+
+```{r}
+library(faraway)
+data(gala)
+# Fit the full model
+full <- lm(Species ~ Area + Elevation + Nearest + Scruz + Adjacent, data = gala)
+# ANOVA table for the full model
+anova(full)
+# Fit the reduced model
+reduced <- lm(Species ~ Elevation + Adjacent, data = gala)
+# ANOVA table for the reduced model
+anova(reduced)
+# General Linear Test
+anova(reduced, full)
+```
+
+
+## Multicollinearity
+
+```{r}
+# Load the needed library MASS (Modern Applied Statistics with S)
+library(MASS)
+# Set the seed of R's random number generator. Useful for creating simulations that can be reproduced.
+set.seed(1)
+x <- mvrnorm(n = 30, c(0, 0), matrix(c(1, 0.95, 0.95, 1), 2))
+X1 <- x[, 1]
+X2 <- x[, 2]
+set.seed(5)
+Y = 4 + 0.8 * X1 + 0.6 * X2 + rnorm(30)
+
+par(las = 1)
+plot(X1, X2, pch = 16, col = "blue")
+# Fit model 1
+model1 <- lm(Y ~ X1 + X2)
+summary(model1)
+# Fit model 2
+model2 <- lm(Y ~ X1)
+summary(model2)
+# Fit model 3
+model3 <- lm(Y ~ X2)
+summary(model3)
+``` 
+
+## Multiple Linear Regression Example
+
+```{r}
+attach(gala)
+summary(gala)
+pairs(gala, cex = 0.5, col = "blue")
+cor(gala)
+
+reduced <- lm(Species ~ Elevation + Adjacent, data = gala)
+plot(reduced$fitted.values, Species, pch = 16, col = "blue")
+abline(0, 1, col = "red")
+
+
+Elev_grid <- seq(25, max(Elevation), 20)
+Adj_grid <- seq(0.03, 4670, 20)
+x_grid <- expand.grid(Elev_grid, Adj_grid)
+beta <- reduced$coefficients
+Spec_est <- beta[1] + x_grid[, 1] * beta[2] + x_grid[, 2] * beta[3]
+
+library(fields)
+image.plot(Elev_grid, Adj_grid, matrix(Spec_est, nrow = length(Elev_grid),
+                                       ncol = length(Adj_grid)))
+points(Elevation, Adjacent, pch = "*", cex = 1.5)
+
+
+new_island <- data.frame(Elevation = 275, Adjacent = 300)
+predict(reduced, new_island, interval = "confidence") 
+predict(reduced, new_island, interval = "predict") 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
