@@ -67,7 +67,7 @@ step_gala <- step(full)
 
 ## Diagnostics in Multiple Linear Regression
 
-###Residuals and Leverage
+### Residuals and Leverage
 
 ```{r}
 step_gala$residuals
@@ -92,7 +92,7 @@ names(lev) <- row.names(gala)
 lev[lev > 0.2]
 ```
 
-###Studentized Residuals
+### Studentized Residuals
 
 ```{r}
 gs <- summary(step_gala)
@@ -108,7 +108,7 @@ plot(studRes, pch = 16,
 abline(h = 0, lty = 2, col = "gray")
 ```
 
-###Identifying Influential Observations: DFFITS
+### Identifying Influential Observations: DFFITS
 ```{r, message=F}
 library(olsrr)
 ols_plot_dffits(step_gala)
