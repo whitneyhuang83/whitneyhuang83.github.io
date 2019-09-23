@@ -1,0 +1,214 @@
+---
+title: "STAT 8020 Lecture 15"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    fig_width: 8.5
+    fig_height: 8
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Nonlinear Regression
+
+### U.S. Population Example
+
+```{r}
+library(car)
+plot(population ~ year, data = USPop,
+     main = "U.S. population",
+     ylim = c(0, 300),pch = "*",
+     xlab = "Census year",
+     ylab = "Population in millions",
+     cex = 1.25, las = 1, col = "blue")
+```
+
+### Logistic growth curve
+
+A logistic function is a symmetric S shape curve with equation:
+$$f(x) = \frac{\phi_{1}}{1+\exp(-(x - \phi_{2})/\phi_{3})}$$
+where
+$\phi_{1}$ is the curve's maximum value;
+$\phi_{2}$ is the curve's midpoint in $x$;
+and $\phi_{3}$ is the "range" (or the inverse growth rate) of the curve.
+
+One typical application of the logistic equation is to model population growth. 
+
+```{r}
+# phi_1 = 10; phi_2 = 4/3, phi_3 = 1
+curve(10 / (1 + exp(-(x - 4/3))), from = -8, to = 10, main = "Logistic growth curve", las = 1, xlab = "", ylab = "")
+```
+
+### Fit a logistic growth curve to the U.S. population data set
+
+```{r}
+pop.ss <- nls(population ~ SSlogis(year, phi1, phi2, phi3), data = USPop)
+summary(pop.ss)
+```
+
+### Alternative model: fit a quadratic polynomial
+
+```{r}
+pop.qm <- lm(population ~ year + I(year^2),
+         USPop)
+summary(pop.qm)
+```
+
+### Comparing the fits
+
+```{r}
+library(scales)
+plot(population ~ year, USPop, 
+     xlim = c(1790, 2100),
+     ylim = c(0, 500),
+     las = 1, pch = "*", col = "blue",
+     xlab = "Census year", ylab = "Population (millions)", cex = 1.6)
+with(USPop, lines(seq(1790, 2100, by = 10),
+                  predict(pop.ss, data.frame(year = seq(1790, 2100, by = 10))), lwd = 1, col = alpha("black", 0.75)))
+points(2010, 308, pch = "*", cex = 2,
+       col = "red")
+abline(h = coef(pop.ss)[1], lty = 3,
+       col = "gray", lwd = 0.95)
+with(USPop, lines(seq(1790, 2100, by = 10),
+                  predict(pop.qm, data.frame(year = seq(1790, 2100, by = 10))), lwd = 1, lty = 2, col = alpha("black", 0.75)))
+legend("bottomright",
+       legend = c("NLR", "PolyR"),
+       lty = c(1, 2),
+       bty = "n")
+```
+
+
+## Non-parametric Regression
+
+### Data
+
+```{r}
+library(MASS)
+data("mcycle")
+attach(mcycle)
+plot(times, accel, pch = "*", cex = 1,
+     col = "blue", las = 1,
+     xlab = "Time (ms)", ylab = "Acceleration (g)")
+```
+
+### Regression spline
+
+```{r}
+library(splines)
+# Select the knots
+knots <- quantile(times, p = seq(0.1, 0.9, 0.1))
+RSFit <- lm (accel ~ bs(times, knots = knots), data = mcycle)
+# Make predictions
+xg <- seq(0, 58, 0.1)
+RSg <- predict(RSFit, data.frame(times = xg))
+```
+
+### GAM
+
+```{r}
+library(mgcv)
+GAMFit <- gam(accel ~ s(times), data = mcycle)
+GAMg <- predict(GAMFit, data.frame(times = xg))
+```
+
+### Smoothing Spline
+
+```{r}
+library(fields)
+SpFit <- sreg(times, accel)
+Spg <- predict(SpFit, xg)
+```
+
+### Local Regression
+
+```{r}
+library(locfit)
+locFit <- locfit(accel ~ times,
+                 data = mcycle)
+locg <- predict(locFit, xg)
+```
+
+
+```{r}
+xg <- seq(0, 58, 0.1)
+library(MASS)
+summary(mcycle)
+attach(mcycle)
+plot(times, accel, pch = "*", cex = 1,
+     col = "blue", las = 1,
+     xlab = "Time (ms)", ylab = "Acceleration (g)")
+lines(xg, RSg)
+lines(xg, GAMg, col = "green")
+lines(xg, Spg, col = "red")
+legend("topleft", legend = c("Regression Spline", "Generalized Additive Model",
+                             "Smoothing Spline"), lty = 1, bty = "n", cex = 0.8,
+       col = c("black", "green", "red"))
+```
+
+
+## Regression Tree
+
+```{r}
+library(rpart)
+library(rpart.plot)
+hitters <- read.csv('./Hitters.csv')
+head(hitters)
+reg.tree <- rpart(Salary ~ Years + Hits, data = hitters)
+rpart.plot(reg.tree, type = 4)
+```
+
+
+## Ridge regression
+
+```{r}
+library (car)
+library (ridge)
+data(longley, package="datasets")
+head (longley)
+```
+
+```{r}
+inputData <- data.frame (longley)
+colnames(inputData)[1] <- "response"
+XVars <- inputData[, -1]
+round(cor(XVars), 2)
+```
+
+
+```{r}
+set.seed(800) # set seed to replicate results
+trainingIndex <- sample(1:nrow(inputData), 0.8 * nrow(inputData)) # indices for 80% training data
+trainingData <- inputData[trainingIndex,] # training data
+testData <- inputData[-trainingIndex,] # test data
+```
+
+```{r}
+lmMod <- lm(response ~ ., trainingData)  # the linear reg model
+summary (lmMod) # get summary
+vif(lmMod) # get VIF
+```
+
+
+```{r}
+predicted <- predict(lmMod, testData)  # predict on test data
+compare <- cbind (actual=testData$response, predicted)  # combine actual and predicted
+
+mean((compare[,1] -compare[,2])^2)
+```
+
+```{r}
+linRidgeMod <- linearRidge(response ~ ., data = trainingData) 
+summary(linRidgeMod)
+predicted <- predict(linRidgeMod, testData)  # predict on test data
+compare <- cbind (actual=testData$response, predicted)  # combine
+mean((compare[,1] -compare[,2])^2)
+```
+
