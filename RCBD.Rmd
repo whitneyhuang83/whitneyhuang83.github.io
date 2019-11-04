@@ -1,0 +1,64 @@
+---
+title: "RCBD"
+author: "Whitney"
+date: "11/2/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Create the data set
+
+```{r}
+x <- c(52, 47, 44, 51, 42, 60, 55, 49, 52, 43, 56, 48, 45, 44, 38)
+trt <- rep(c("A", "B", "C"), each = 5)
+blk <- rep(1:5, 3)
+dat <- data.frame(x = x, trt = trt, blk = as.factor(blk))
+```
+
+## Two-way ANOVA
+
+```{r}
+aov <- aov(x ~ trt + blk, data = dat)
+lm <- lm(x ~ trt + blk, data = dat)
+anova(lm)
+```
+
+## One-way ANOVA
+
+```{r}
+lm2 <- lm(x ~ trt, data = dat)
+anova(lm2)
+```
+
+## Interaction plot: assessing the additivity assumption
+
+```{r}
+interaction.plot(dat$trt, dat$blk,
+                 x, las = 1,
+                 col = 1:5)
+```
+
+## Multiple Comparisons
+### Fisher’s LSD
+
+```{r}
+library(agricolae)
+LSD_bon <- LSD.test(aov , "trt",
+                    p.adj = "bonferroni")
+LSD_bon$groups
+```
+
+### Tukey’s HSD
+
+```{r}
+HSD <- TukeyHSD(aov, conf.level = 0.95)
+HSD$trt
+```
+
+
+
+
+
