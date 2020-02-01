@@ -1,0 +1,289 @@
+---
+title: "Extreme Value Analysis for Clemson Daily Rainfall"
+author: "Whitney Huang"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 8.5
+    fig_height: 6
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+These data were taken from United States Historical Climatology Network（http://cdiac.ornl.gov/epubs/ndp/ushcn/ushcn.html). These data were compiled by Will Kleiber from CU-Boulder, thanks Will!
+
+## Load the USHCN dataset
+
+```{r}
+load("USHCNprcpSetup.rdata")
+```
+
+## Extract the time series at a station near Clemson
+
+```{r, message=FALSE}
+Clemson.lon.lat <-  c(-82.8374, 34.6834)
+library(fields)
+dist2Clemson <- rdist.earth(matrix(Clemson.lon.lat, 1, 2), lon.lat, miles = F)
+id <- which.min(dist2Clemson)
+lon.lat[id,] # near Lamaster Dairy Center
+stn.name[id]
+
+## Use data from 1950/1/1-2014/12/31
+dat <- PRCP[(50 * 365 + 1):41975, id]
+```
+
+```{r}
+# Reformat the data into [day, year] and convert rainfall to inches
+rain <- array(dat, dim = c(365, 65)) / 100
+# Extract annual maxima
+annmx <- apply(rain, 2, max, na.rm = T)
+# Extract the timing of annual maxima
+annmxT <- apply(rain, 2, which.max)
+# Plot the daily time series
+plot(1950 + 1:23725/365, c(rain),
+     xlab = "Year", ylab = "Precipitation (in)",
+     main = "Daily Precip in Clemson", type = "h",
+     pch = 19, cex = 0.5, col = "lightblue",
+     ylim = c(0, 7), las = 1)
+grid()
+```
+
+## Block-Maxima Method 
+
+We are going to conduct an extreme value analysis using the `extRemes` package developed and maintained by `Eric Gilleland`.
+
+### Step I: Determine the block size and compute maxima for blocks
+
+```{r, message=FALSE}
+# Setting up the figure configuration
+old.par <- par(no.readonly = TRUE)
+mar.default <- par("mar")
+mar.left <- mar.default
+mar.right <- mar.default
+mar.left[2] <- 0
+mar.right[4] <- 0
+
+# Time series plot
+par(fig = c(0.2, 1, 0, 1), mar = mar.left)
+plot(1950 + 1:23725/365, c(rain),
+      xlab = "Year", ylab = "",
+      main = "Daily Precip in Clemson",
+      type = "h", pch = 19, cex = 0.5, col = "lightblue",
+      ylim = c(0, 7.5), yaxt = "n")
+par(las = 2)
+axis(4, at = 0:8)
+par(las = 0)
+mtext("Precipitation (in)", side = 2, line = 5)
+abline(v = 1950:2015, col = "gray", lty = 2)
+points(1950:2014 + annmxT / 365, annmx,
+       pch = 16, col = "blue", cex = 0.5)
+# Histogram
+hs <- hist(annmx,
+           breaks = seq(0, 7.5, length.out = 35),
+           plot = FALSE)
+
+par(fig = c(0, 0.2, 0, 1.0), mar = mar.right, new = T)
+plot (NA, type = 'n', axes = FALSE, yaxt = 'n',
+      col = rgb(0, 0, 0.5, alpha = 0.5),
+      xlab = "Density", ylab = NA, main = NA,
+      xlim = c(-0.55, 0),
+      ylim = c(0, 7.5))
+axis(1, at = c(-0.5, -0.25, 0), c(0.5, 0.25, 0), las = 2)
+arrows(rep(0, length(hs$breaks[-35])), hs$breaks[-35],
+       -hs$density, hs$breaks[-35], col = "blue",
+       length = 0, angle = 0, lwd = 1)
+arrows(rep(0, length(hs$breaks[-1])), hs$breaks[-1],
+       -hs$density, hs$breaks[-1], col = "blue",
+       length = 0, angle = 0, lwd = 1)
+arrows(-hs$density, hs$breaks[-35], -hs$density,
+       hs$breaks[-1], col = "blue", angle = 0,
+       length = 0)
+library(extRemes)
+mle <- fevd(annmx)$results$par
+xg <- seq(0, 7.5, length.out = 100)
+library(ismev)
+lines(-gev.dens(mle, xg), xg, col = "red") 
+par(old.par)
+```
+
+### Step II: Fit a GEV to the maxima and assess the fit
+
+We assume $m_{1}, \cdots, m_{t}$ follows a GEV distribution $GEV(\mu_{n}, \sigma_{n}, \xi)$ and we maximize the log-likelihood  
+$$-\sum_{i=1}^{t} m_{i}^{-\frac{1}{\xi}}- t log(\sigma) - (\frac{1}{\xi}+1)\sum_{i=1}^{t}log(m_{i})$$
+
+
+```{r, message=FALSE, fig.height=6, fig.width=6}
+# Fit a GEV to annual maximum daily precip using MLE
+library(scales)
+gevfit <- fevd(annmx)
+# Print the results 
+gevfit
+#QQ plot
+p <- 1:65 / 66
+qm <- gevq(mle, 1 - p)
+plot(qm, sort(annmx), xlim = c(1.8, 6.5), ylim = c(1.8, 6.5), pch = 16, cex = 1, col = alpha("blue", 0.5), xlab = "Model", ylab = "Empirical",
+     main ="Quantile Plot", las = 1)
+abline(0, 1, lwd = 1.5)
+```
+
+### Step III: Perform inference for return levels
+
+Suppose we are interested in estimating 50-year return level
+
+
+
+```{r}
+RL50 <- return.level(gevfit, return.period = 50) # Estimate of the 100-year event
+RL50
+# Quantify the estimate uncertainty
+## Delta method
+CI_delta <- ci(gevfit, return.period = 50, verbose = T) 
+CI_delta
+## Profile likelihood method
+CI_prof <- ci(gevfit, method = "proflik", xrange = c(4, 10),
+   return.period = 50, verbose = F)
+CI_prof 
+
+hist(annmx, breaks = seq(0, 7.5, length.out = 35),
+     col = alpha("lightblue", 0.2), border = "gray",
+     xlim = c(0, 7.5), prob = T, ylim = c(0, 0.6),
+     xlab = " Annmx Precip (in)",
+     main = "95% CI for 50-yr RL",
+     las = 1)
+xg <- seq(0, 10, len = 1000)
+mle <- gevfit$results$par
+lines(xg, gev.dens(mle, xg), lwd = 1.5)
+for (i in c(1, 3)) abline(v = CI_delta[i], lty = 2, col = "blue")
+for (i in c(1, 3)) abline(v = CI_prof[i], lty = 2, col = "red")
+abline(v = RL50, lwd = 1.5, lty = 2)
+legend("topleft", legend = c("Delta CI", "Prof CI"), col = c("blue", "red"),
+       lty = c(2, 3), bty = "n", cex = 1.25, lwd = 1.5)
+```
+
+
+## Peak-Over-Threshold Method
+
+
+### Step I: Pick a threshold and extract the threshold exceedances
+
+
+```{r}
+old.par <- par(no.readonly = TRUE)
+mar.default <- par('mar')
+mar.left <- mar.default
+mar.right <- mar.default
+mar.left[2] <- 0
+mar.right[4] <- 0
+# Time series plot
+par(fig = c(0.2, 1, 0, 1), mar = mar.left)
+plot(1950 + 1:23725/365, c(rain),
+      xlab = "Year", ylab = "",
+      main = "Daily Precip in Clemson",
+      type = "h", pch = 19, cex = 0.5, col = "lightblue",
+      ylim = c(0, 7.5), yaxt = "n")
+par(las = 2)
+axis(4, at = 0:8)
+par(las = 0)
+mtext("Precipitation (in)", side = 2, line = 4)
+#Threshold exceedances
+thres <- 0.75
+ex_id <- which(rain > thres)
+ex <- rain[ex_id]
+length(ex)
+#Extract the timing of POT
+abline(h = thres, col = "blue", lty = 2)
+points(1950 + ex_id / 365, ex, col = alpha("blue", 0.5), pch = 16,
+       cex = 0.75)
+par(las = 2)
+axis(4, at = 0:8)
+par(las = 0)
+#mtext("Precipitation (in)", side = 2, line = 5)
+grid()
+hs <- hist(ex, seq(thres, 7.5, len = 50), plot = FALSE)
+par(fig = c(0, 0.2, 0, 1.0), mar = mar.right, new = T)
+plot (NA, type = 'n', axes = FALSE, yaxt = 'n',
+      col = rgb(0,0,0.5, alpha = 0.5),
+      xlab = "Density", ylab = NA, main = NA,
+      xlim = c(-max(hs$density), 0),
+      ylim = c(0, 7.5))
+axis(1, at = c(-1.6, -1.2, -0.8, -0.4, 0),
+     c(1.6, 1.2, 0.8, 0.4, 0), las = 2)
+#abline(h = 21, col = "red", lty = 5)
+arrows(rep(0, length(hs$breaks[-50])), hs$breaks[-50],
+       -hs$density, hs$breaks[-50], col = "blue",
+       length = 0, angle = 0, lwd = 1)
+arrows(rep(0, length(hs$breaks[-1])), hs$breaks[-1],
+       -hs$density, hs$breaks[-1], col = "blue",
+       length = 0, angle = 0, lwd = 1)
+arrows(-hs$density, hs$breaks[-50], -hs$density,
+       hs$breaks[-1], col = "blue", angle = 0,
+       length = 0)
+
+mle <- fevd(c(rain[!is.na(rain)]), threshold = thres, type = "GP")$results$par
+xg <- seq(thres, 7.5, length.out = 100)
+lines(-gpd.dens(mle, thres, xg), xg, col = "red")
+par(old.par)
+```
+
+### How to choose the "right" threshold?
+
+
+```{r}
+mrlplot(dat[!is.na(dat)] / 100, main = "Mean Residual Life", xlab = "Threshold (in)", las = 1)
+# I choose 0.75 as the threshold but note that the "straightness"
+# is difficult to assess
+abline(v = 0.75, col = "blue", lty = 2)
+```
+
+
+### Step II: Fit a GPD to threshold excesses and assess the fit
+
+```{r, fig.height=6, fig.width=6}
+# Fit a GPD for threshold exceenances using MLE
+gpdfit1 <- fevd(c(rain[!is.na(rain)]), threshold = thres, type = "GP")
+# Print the results 
+gpdfit1
+# QQ plot
+p <- 1:1489 / 1490
+qm <- gpdq(mle, 0.75, 1 - p)
+plot(qm, sort(ex), xlim = c(0.5, 6.5), ylim = c(0.5, 6.5),
+     pch = 16, cex = 1, col = alpha("blue", 0.5),
+     xlab = "Model", ylab = "Empirical", main = "Quantile Plot",
+     las = 1)
+abline(0, 1, lwd = 1.5)
+```
+
+
+### Step III: Perform inference for return levels
+
+Again we are interested in estimating 50-year return level
+
+
+```{r}
+RL50 <- return.level(gpdfit1, return.period = 50 * 365 / 365.25)
+RL50
+CI_delta <- ci(gpdfit1, return.period = 50 * 365 / 365.25,
+               verbose = F) 
+CI_delta
+CI_prof <- ci(gpdfit1, method = "proflik", xrange = c(4, 10),
+   return.period = 50 * 365 / 365.25, verbose = F)
+CI_prof
+
+
+hist(ex, 40, col = alpha("lightblue", 0.2), border = "gray",
+     xlim = c(thres, 7.5), prob = T, ylim = c(0, 2),
+     xlab = "Threshold excess (in)",
+     main = "95% CI for 50-yr RL")
+xg <- seq(thres, 10, len = 1000)
+mle <- gpdfit1$results$par
+lines(xg, gpd.dens(mle, thres, xg), lwd = 1.5)
+for (i in c(1, 3)) abline(v = CI_delta[i], lty = 2, col = "blue")
+for (i in c(1,3)) abline(v = CI_prof[i], lty = 2, col = "red")
+abline(v = RL50, lwd = 1.5, lty = 2)
+legend("topleft", legend = c("Delta CI", "Prof CI"),
+       col = c("blue", "red"), lty = c(2, 3), bty = "n", cex = 1.25,
+       lwd = 1.5)
+```
