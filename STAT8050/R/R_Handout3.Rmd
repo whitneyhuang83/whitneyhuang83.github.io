@@ -1,0 +1,44 @@
+---
+title: 'R Handout: Subsampling'
+author: "Whitney"
+date: "1/30/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load R libraries
+
+```{r}
+library(lme4)
+# install.packages(c("lsmeans", "lmerTest", "pbkrtest"))
+library(lsmeans)
+library(lmerTest)
+```
+
+## Read CSV file into R
+
+```{r}
+cracker <- read.csv("cracker.csv", header = T)
+contf <- factor(cracker$cont) # convert cont to factors
+contf
+boxf <- factor(cracker$box)  # convert boxf to factors
+boxf
+moist <- cracker$moisture
+```
+
+## Model fit
+
+```{r}
+mod <- lmer(moist ~ contf + (1|boxf/contf), REML = TRUE)
+mod
+```
+
+
+```{r}
+lsmeans(mod, list(pairwise ~ contf), adjust = "none")
+anova(mod)
+```
+
