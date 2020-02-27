@@ -1,0 +1,24 @@
+---
+title: "STAT8010_Lect13"
+author: "Whitney"
+date: "2/27/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+treatment <- c(18, 43, 28, 50, 16, 32, 13, 35, 38, 33, 6, 7)
+control <- c(40, 54, 26, 63, 21, 37, 39, 23, 48, 58, 28, 39)
+dat <- data.frame(cbind(treatment, control))
+summary(dat)
+
+boxplot(dat, boxwex = 0.3, las = 1)
+apply(dat, 2, mean)
+apply(dat, 2, sd)
+var.test(treatment, control)
+t.test(treatment, control, var.equal = T)
+```
+
