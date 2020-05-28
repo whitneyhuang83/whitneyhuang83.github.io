@@ -1,0 +1,214 @@
+---
+title: "Changes in NA Near-Surface Wind Speeds"
+author: "Whitney"
+date: "5/28/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load the data
+
+```{r}
+library(ncdf4)
+nc <- nc_open("wind.change.hgt.ivg.nc")
+spd_delta <- ncvar_get(nc, "spd")
+spd95_delta <- ncvar_get(nc, "spd95")
+Lat <- ncvar_get(nc, "lat")
+Lon <- ncvar_get(nc, "lon")
+
+ncFiles <- list.files(pattern = "*.nc")
+nc <- lapply(ncFiles[-3], nc_open)
+
+spd_p <- ncvar_get(nc[[3]], "spd")
+spd_f <- ncvar_get(nc[[4]], "spd")
+spd95_p <- ncvar_get(nc[[1]], "spd95")
+spd95_f <- ncvar_get(nc[[2]], "spd95")
+```
+
+## Plotting rounties
+
+```{r}
+# Produce map in changes (red increase, blue decrease, white no change)
+two.cols <- function(dat, nlevels, col = c("blue", "white", "red")){
+  n = nlevels
+  z = c(dat)
+  n1 = floor(n * (abs(range(z)[1])) / (range(z)[2] - range(z)[1]))
+  n2 = n - n1
+  col1 = colorRampPalette(col[1:2])(n1)
+  col2 = colorRampPalette(col[2:3])(n2)
+  cols = c(col1, col2)
+  return(cols)
+}
+
+plot_WRF_wind <- function(lon = lon, lat = lat, dat, col = "gray",
+                          image.col = tim.colors(), title,...){
+  par(mar = c(0, 4, 1, 1))
+  maps::map("world", xlim = c(-145, -45), ylim = c(20, 60),
+            mar = c(0, 3, 1, 1))
+  #axis(1); axis(2)
+  image.plot(lon, lat, dat, add = T, horizontal = T, col = image.col,
+             ...)
+  maps::map("world", xlim = c(-145, -45), ylim = c(20, 60), add = T,
+            col = col)
+  maps::map("state", xlim = c(-145, -45), ylim = c(20, 60),
+            add = T, col = col)
+  title(title)
+}
+```
+
+## Selected locations 
+
+```{r, message=FALSE}
+select <- matrix(c(-120.6, 33.8017, -119.735, 33.4773,
+                   -116.02, 43.2696, -114.69, 43.7076,
+                   -124.419, 44.2998, -97.5567, 32.0997, 
+                   -99.8971, 48.2343, -82.3954, 36.1412,
+                   -73.0984, 40.606, -82.4075, 41.6163
+                   ), 10, 2, byrow = T)
+
+## Restrict the spatial domain
+xid <- 125:550; yid <- 30:330
+lon <- Lon[xid, yid]; lat <- Lat[xid, yid]
+## Search gird cell indices for the selected grids
+library(fields)
+dist2select <- rdist.earth(select, cbind(c(lon), c(lat)), miles = F)
+id <- apply(dist2select, 1, which.min)
+index <- function(x, row = 426) matrix(c(x %% row, x %/% row + 1), 1, 2)
+ID <- sapply(id, index)
+```
+
+## Annual Mean Wind Speed 
+
+```{r}
+# Present
+plot_WRF_wind(lon, lat, dat = spd_p[xid, yid], title = "1995-2004 mean wind speed (m/s)")
+for (i in 1:10) points(lon[ID[1, i], ID[2, i]], lat[ID[1, i], ID[2, i]],
+       pch = "+")
+# Future
+plot_WRF_wind(lon, lat, dat = spd_f[xid, yid], title = "2085-2094 mean wind speed (m/s)")
+for (i in 1:10) points(lon[ID[1, i], ID[2, i]], lat[ID[1, i], ID[2, i]],
+       pch = "+")
+# Change
+delta <- spd_f[xid, yid] - spd_p[xid, yid]
+plot_WRF_wind(lon, lat, dat = delta,
+              title = "Change in mean wind speed (m/s)",
+              image.col = two.cols(delta, 200))
+for (i in 1:10) points(lon[ID[1, i], ID[2, i]], lat[ID[1, i], ID[2, i]],
+       pch = "+")
+# Ratio
+ratio <- log(spd_f[xid, yid] / spd_p[xid, yid])
+ticks <- seq(-0.2, 0.1, 0.05)
+plot_WRF_wind(lon, lat, dat = ratio,
+              title = "Ratio of mean wind speed",
+              image.col = two.cols(ratio, 200),
+              axis.args = list(at = ticks,
+                               labels = round(exp(ticks) - 1, 2)))
+for (i in 1:10) points(lon[ID[1, i], ID[2, i]], lat[ID[1, i], ID[2, i]],
+       pch = "+")
+```
+
+## 95th Percentile Wind Speed 
+
+```{r}
+# Present
+plot_WRF_wind(lon, lat, dat = spd95_p[xid, yid], title = "1995-2004 95th percentile wind speed (m/s)")
+for (i in 1:10) points(lon[ID[1, i], ID[2, i]], lat[ID[1, i], ID[2, i]],
+       pch = "+")
+# Future
+plot_WRF_wind(lon, lat, dat = spd95_f[xid, yid], title = "2085-2094 95th percentile wind speed (m/s)")
+for (i in 1:10) points(lon[ID[1, i], ID[2, i]], lat[ID[1, i], ID[2, i]],
+       pch = "+")
+# Change
+delta <- spd95_f[xid, yid] - spd95_p[xid, yid]
+plot_WRF_wind(lon, lat, dat = delta,
+              title = "Change in 95th percentile wind speed (m/s)",
+              image.col = two.cols(delta, 200))
+for (i in 1:10) points(lon[ID[1, i], ID[2, i]], lat[ID[1, i], ID[2, i]],
+       pch = "+")
+# Ratio
+ratio <- log(spd95_f[xid, yid] / spd95_p[xid, yid])
+ticks <- seq(-0.2, 0.1, 0.05)
+plot_WRF_wind(lon, lat, dat = ratio,
+              title = "Ratio of 95th percentile wind speed",
+              image.col = two.cols(ratio, 200),
+              axis.args = list(at = ticks,
+                               labels = round(exp(ticks) - 1, 2)))
+for (i in 1:10) points(lon[ID[1, i], ID[2, i]], lat[ID[1, i], ID[2, i]],
+       pch = "+")
+```
+
+## Semi-Automated Search for other Locations 
+
+```{r}
+## Large increases in 95th precentile
+
+temp <- sapply(order(spd95_delta[xid, yid], decreasing = T)[1:600], index)
+maps::map("world", xlim = c(-145, -45), ylim = c(20, 60),
+          mar = rep(0, 4))
+maps::map("state", xlim = c(-145, -45), ylim = c(20, 60),
+          add = T)
+for (i in 1:600)
+points(lon[temp[1, i], temp[2, i]], lat[temp[1, i], temp[2, i]],
+       pch = "+", col = "red", cex = 0.5)
+
+## Large decreases in 95th precentile
+
+temp <- sapply(order(spd95_delta[xid, yid])[1:600], index)
+maps::map("world", xlim = c(-145, -45), ylim = c(20, 60),
+          mar = rep(0, 4))
+maps::map("state", xlim = c(-145, -45), ylim = c(20, 60),
+          add = T)
+for (i in 1:600)
+points(lon[temp[1, i], temp[2, i]], lat[temp[1, i], temp[2, i]],
+       pch = "+", col = "blue", cex = 0.5)
+
+## Large increases in mean
+
+temp <- sapply(order(spd_delta[xid, yid], decreasing = T)[1:600], index)
+maps::map("world", xlim = c(-145, -45), ylim = c(20, 60),
+          mar = rep(0, 4))
+maps::map("state", xlim = c(-145, -45), ylim = c(20, 60),
+          add = T)
+for (i in 1:600)
+points(lon[temp[1, i], temp[2, i]], lat[temp[1, i], temp[2, i]],
+       pch = "+", col = "red", cex = 0.5)
+
+## Large decreases in mean
+
+temp <- sapply(order(spd_delta[xid, yid])[1:600], index)
+maps::map("world", xlim = c(-145, -45), ylim = c(20, 60),
+          mar = rep(0, 4))
+maps::map("state", xlim = c(-145, -45), ylim = c(20, 60),
+          add = T)
+for (i in 1:600)
+points(lon[temp[1, i], temp[2, i]], lat[temp[1, i], temp[2, i]],
+       pch = "+", col = "blue", cex = 0.5)
+
+## Large increases in 95th precentile/mean ratio
+temp <- sapply(order(log(spd95_f[xid, yid] / spd95_p[xid, yid]) - log(spd_f[xid, yid] / spd_p[xid, yid]), decreasing = T)[1:600], index)
+
+maps::map("world", xlim = c(-145, -45), ylim = c(20, 60),
+          mar = rep(0, 4))
+maps::map("state", xlim = c(-145, -45), ylim = c(20, 60),
+          add = T)
+for (i in 1:600)
+points(lon[temp[1, i], temp[2, i]], lat[temp[1, i], temp[2, i]],
+       pch = "+", col = "red", cex = 0.5)
+
+## Large decreases in 95th precentile/mean ratio
+temp <- sapply(order(log(spd95_f[xid, yid] / spd95_p[xid, yid]) - log(spd_f[xid, yid] / spd_p[xid, yid]))[1:600], index)
+
+maps::map("world", xlim = c(-145, -45), ylim = c(20, 60),
+          mar = rep(0, 4))
+maps::map("state", xlim = c(-145, -45), ylim = c(20, 60),
+          add = T)
+for (i in 1:600)
+points(lon[temp[1, i], temp[2, i]], lat[temp[1, i], temp[2, i]],
+       pch = "+", col = "blue", cex = 0.5)
+```
+
+
+
