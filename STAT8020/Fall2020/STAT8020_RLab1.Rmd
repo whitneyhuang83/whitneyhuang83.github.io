@@ -1,0 +1,166 @@
+---
+title: 'STAT 8020 R Lab 1: Simple Linear Regression'
+author: "Whitney Huang"
+date: "8/20/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Lab Objective
+
+* To gain experience with R, a programming language and free software environment for statistical computing and graphics.
+* To learn how to use R to conduct a simple linear regression analysis
+
+### Example: Maximum Heart Rate vs. Age
+
+The maximum heart rate ($\text{HR}_{max}$) of a person is often said to be related to age (Age) by the equation:
+$$\text{HR}_{max} = 220 - \text{Age}$$
+
+Let's use a dataset to assess this statement.
+
+
+### Setup
+
+* You should have R installed, if not, open a web browser and go to (http://cran.r-project.org) and download and install R. It also helpful to install RStudo (http://rstudio.com).
+
+* Create a folder for this R lab. Download the Maximum Heart Rate dataset at (http://whitneyhuang83.github.io/maxHeartRate.csv) and save it in the folder you just created.
+
+### Load the dataset
+
+There are several ways to load a dataset into R:
+
++ Importing Data over the Internet
+
+```{r}
+dat <-read.csv('http://whitneyhuang83.github.io/STAT8010/Data/maxHeartRate.csv', header = T) 
+```
+
+Let's take a look at the data
+
+```{r}
+dat
+```
+
++ Read the dataset from you computer
+
+```{r, message=FALSE}
+dat <- read.csv('maxHeartRate.csv', header = T) 
+```
+
++ If the data is not too big, you can type the data into R
+
+```{r}
+age <- c(18, 23, 25, 35, 65, 54, 34, 56, 72, 19, 23, 42, 18, 39, 37)
+maxHeartRate <- c(202, 186, 187, 180, 156, 169, 174, 172, 153,
+                  199, 193, 174, 198, 183, 178)
+dat <- data.frame(cbind(age, maxHeartRate))
+```
+
+### Examine the data before fitting models
+
+```{r}
+summary(dat)
+var(dat$age); var(dat$maxHeartRate)
+cov(dat$age, dat$maxHeartRate)
+cor(dat$age, dat$maxHeartRate)
+```
+
+### Plot the data before fitting models
+
+This is what the scatterplot would look like by default. Put predictor (age) to the first argument and response (maxHeartRate) to the second argument.
+
+
+```{r}
+plot(dat$age, dat$maxHeartRate)
+```
+
+Let's make the plot look nicer (type ?plot to learn more).
+
+```{r}
+par(las = 1, mar = c(4.1, 4.1, 1.1, 1.1))
+plot(dat$age, dat$maxHeartRate,
+     pch = 16, xlab = "Age",
+     ylab = "Max heart rate (bpm)")
+grid()
+```
+
+**Question:** Describe the direction, strength, and the form of the relationship.
+
+### Simple linear regression
+
+Let's do the calculations to figure out the regression coefficients as well as the standard deviation of the random error.   
+
+* Slope
+
+```{r}
+X <- dat$age; Y <- dat$maxHeartRate
+Y_diff <- Y - mean(Y)
+X_diff <- X - mean(X)
+beta_1 <- sum(Y_diff * X_diff) / sum((X_diff)^2)
+beta_1
+```
+* Intercept
+
+```{r}
+beta_0 <- mean(Y) - mean(X) * beta_1
+beta_0
+```
+
+
+* Fitted values
+```{r}
+Y_hat <- beta_0 + beta_1 * X
+Y_hat
+```
+
+* $\hat{\sigma}$
+
+```{r}
+sigma2 <- sum((Y - Y_hat)^2) / (length(Y) - 2)
+sqrt(sigma2)
+```
+
+Add the fitted regression line to the scatterplot
+
+```{r}
+par(las = 1, mar = c(4.1, 4.1, 1.1, 1.1))
+plot(dat$age, dat$maxHeartRate,
+     pch = 16, xlab = "Age",
+     ylab = "Max heart rate (bpm)")
+grid()
+abline(a = beta_0, b = beta_1,
+       col = "blue")
+```
+
+### Let R do all the work
+
+```{r}
+fit <- lm(maxHeartRate ~ age,
+          data = dat)
+summary(fit)
+```
+
+* Regression coefficients
+
+```{r}
+fit$coefficients
+```
+* Fitted values
+
+```{r}
+fit$fitted.values
+```
+
+* $\hat{\sigma}$
+
+```{r}
+summary(fit)$sigma
+```
+
+
+
+
+
