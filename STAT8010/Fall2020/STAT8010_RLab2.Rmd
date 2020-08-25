@@ -1,0 +1,198 @@
+---
+title: 'STAT 8010 R Lab 2: Data Summary/Visualization I'
+author: "Whitney Huang"
+date: "8/20/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load the dataset
+
+There are several ways to load a dataset into R:
+
++ Importing data over the Internet
+
+```{r}
+sport <- read.table("https://whitneyhuang83.github.io/STAT8010/Data/sport.txt", header = TRUE)
+```
+
+Let's take a look at the data
+
+```{r}
+#sport
+head(sport) # print the first 6 observations
+```
+
++ Read the dataset from you computer
+
+```{r}
+# Set working directory
+setwd("/Users/wkhuang/Desktop/Desktop - mass-mini19-huang/Teaching/R/20Fall")
+# This is the path  of the folder (in your computer). 
+getwd()
+dir()
+sport1 <- read.table("sport.txt", header = TRUE)
+```
+
+### Frequency Table
+
+```{r}
+tab1 <- table(sport)
+tab1 # print the table
+# Relative frequency 
+n <- dim(sport)[1] # sample size
+tab2 <- table(sport)/n
+tab2
+```
+
+### Bar Chart
+
+```{r}
+# Bart chart for the frequency
+par(las = 2, mar = c(7.1, 4.1, 1.1, 1.1))
+barplot(tab1, ylab = "Frequency")
+# Bart chart for the relative frequency
+par(las = 2, mar = c(7.1, 4.1, 1.1, 1.1))
+barplot(tab2, ylab = "Relative Frequency")
+# Pareto chart
+par(las = 2, mar = c(7.1, 4.1, 1.1, 1.1))
+barplot(sort(tab1, decreasing = T), ylab = "Frequency")
+```
+
+### Pie Chart
+
+```{r}
+par(mar = c(1.1, 3.1, 1.1, 3.1))
+pie(tab1, col = rainbow(8))
+# rotate the pie
+par(mar = c(1.1, 3.1, 1.1, 3.1))
+pie(table(sport), col = rainbow(8), init.angle = 135)
+```
+
+### Load the ORD flight dataset
+
+```{r}
+url <- "https://whitneyhuang83.github.io/STAT8010/Data/flights.csv"
+ORD <- read.csv(url, header = TRUE)
+```
+
+### Let's take a look at the data
+
+```{r}
+dim(ORD)
+n <- dim(ORD)[1]
+head(ORD)
+```
+
+### 2 way Frequency Table
+
+```{r}
+tab3 <- table(ORD[, c("carrier", "origin")])
+tab3
+
+tab4 <- table(ORD[, c("carrier", "origin")])/n
+tab4
+```
+
+### Stacked/dodged bar chart
+
+```{r}
+## Stacked bar chart
+barplot(tab3, xlab = "Origin", col = c("darkblue","red"), args.legend = list(x = "topleft"), las = 1)
+legend("topleft", legend = c("UA", "AA"),
+       pch = 15, col = c("red", "blue"), bty = "n", cex = 1.25, title = "Carrier")
+
+## Dodged bar chart
+barplot(tab3, xlab = "Origin", col = c("darkblue","red"), args.legend = list(x = "topleft"), las = 1, beside = T)
+legend("topleft", legend = c("UA", "AA"),
+       pch = 15, col = c("red", "blue"), bty = "n", cex = 1.25, title = "Carrier")
+```
+
+#### Violent Crime Rates by US State
+
+This data set contains statistics, in arrests per 100,000 residents for assault, murder, and rape in each of the 50 US states in 1973. Also given is the percent of the population living in urban areas.
+
+
+```{r}
+data(USArrests) # this is a bulit-in data in R
+dim(USArrests)
+head(USArrests)
+```
+
+### Stem-and-Leaf Plot
+
+```{r}
+stem(USArrests$Murder)
+stem(USArrests$Murder, scale = 2)
+```
+
+### Histogram
+
+```{r}
+par(las = 1)
+hist(USArrests$Murder, main = "Histogram of US Murder Rate in 1973",
+     col = "lightblue", border = "gray", xlab = "Murder Rate (per 100,000)")
+# Let's change the bin size
+par(las = 1)
+hist(USArrests$Murder, nclass = 15,
+     main = "Histogram of US Murder Rate in 1973", col = "lightblue",
+     border = "gray", xlab = "Murder Rate (per 100,000)")
+# Let's change the bin size again 
+par(las = 1)
+hist(USArrests$Murder, nclass = 2,
+     main = "Histogram of US Murder Rate in 1973", col = "lightblue",
+     border = "gray", xlab = "Murder Rate (per 100,000)")
+```
+
+
+### Boxplot
+
+```{r}
+# Horizontal boxplot
+par(las = 1)
+boxplot(USArrests$Murder, main = "Murder Rate (per 100,000)", horizontal = T)
+# Vertical boxplot
+par(las = 1)
+boxplot(USArrests$Murder, main = "Murder Rate (per 100,000)")
+```
+
+
+### Qualitative vs Quantitative: Side by Side Boxplots
+
+```{r, eval=FALSE}
+attach(ORD)
+library(tidyverse)
+boxplot(arr_delay ~ carrier, filter(ORD, arr_delay > 10), boxwex = 0.35,
+        col = c("blue", "red"),
+        staplewex = 0.35, outwex = 0.35,
+        cex.axis = 1.5, las = 1, log = "y",
+        outcol = c("blue", "red"),
+        outcex = 0.35, main = "Arrival Delay vs. Carrier")
+abline(h = 11, lty = 2, col = "gray")
+```
+
+### Quantitative vs Quantitative: Scatter Plot
+
+```{r}
+url <- "https://whitneyhuang83.github.io/STAT8010/Data/maxHeartRate.csv"
+dat <- read.csv(url, header = TRUE)
+
+par(las = 1, mar = c(4.1, 4.1, 1.1, 1.1))
+plot(dat$Age, dat$MaxHeartRate, pch = 16, xlab = "Age", ylab = "Max heart rate (bpm)")
+grid()
+```
+
+
+
+
+
+
+
+
+
+
+
+

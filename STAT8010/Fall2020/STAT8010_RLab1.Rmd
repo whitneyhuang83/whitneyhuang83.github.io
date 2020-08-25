@@ -1,0 +1,73 @@
+---
+title: 'STAT 8010 R Lab 1: Read data into R'
+author: "Whitney Huang"
+date: "8/20/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Lab Objective
+
+* To gain experience with R, a programming language and free software environment for statistical computing and graphics.
+* To read data into R.
+
+### Setup
+
+* You should have R installed, if not, open a web browser and go to (http://cran.r-project.org) and download and install R. It also helpful to install RStudo (http://rstudio.com).
+
+* Create a folder for this R lab. Download the Maximum Heart Rate dataset at (http://whitneyhuang83.github.io/maxHeartRate.csv) and save it in the folder you just created.
+
+### Load a max heart rate dataset
+
+There are several ways to load a dataset into R:
+
++ Importing Data over the Internet
+
+```{r}
+dat <-read.csv('http://whitneyhuang83.github.io/STAT8010/Data/maxHeartRate.csv', header = T) 
+```
+
+Let's take a look at the data
+
+```{r}
+dat
+```
+
++ Read the dataset from you computer
+
+```{r, message=FALSE}
+dat <- read.csv('maxHeartRate.csv', header = T) 
+```
+
++ If the data is not too big, you can type the data into R
+
+```{r}
+age <- c(18, 23, 25, 35, 65, 54, 34, 56, 72, 19, 23, 42, 18, 39, 37)
+maxHeartRate <- c(202, 186, 187, 180, 156, 169, 174, 172, 153,
+                  199, 193, 174, 198, 183, 178)
+dat <- data.frame(cbind(age, maxHeartRate))
+```
+
+### Load a Facebook dataset
+
+```{r}
+FBdata <- read.csv('/Users/wkhuang/Desktop/Desktop - mass-mini19-huang/Teaching/R/FacebookFriends.csv',
+                   header = T) 
+str(FBdata)
+```
+
+
+### Loading a built-in R data
+
+```{r}
+data("mtcars")
+head(mtcars, 6)
+?mtcars
+```
+
+
+
+
