@@ -1,0 +1,104 @@
+---
+title: "STAT 8020 R Lab 2: Simple Linear Regression II"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    fig_width: 8.5
+    fig_height: 6.5
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Maximum Heart Rate vs. Age Example
+
+### First Step: Load the data
+
+```{r}
+dat <- read.csv('http://whitneyhuang83.github.io/STAT8010/Data/maxHeartRate.csv', header = T) 
+head(dat)
+attach(dat)
+```
+
+## Fitting a simple linear regression
+
+```{r}
+fit <- lm(MaxHeartRate ~ Age)
+summary(fit)
+```
+
+
+## Residual plots
+
+```{r}
+par(las = 1, mar = c(4.1, 4.1, 1.1, 1.1))
+plot(Age, fit$residuals, pch = 16, ylab = "Residuals", ylim = c(-11, 11))
+abline(h = 0, col = "red", lty = 2)
+```
+
+
+## Hypothesis Tests for $\beta_{1}$
+
+$H_{0}: \beta_{1} = -1$ vs. $H_{a}: \beta_{1} \neq -1$ with $\alpha = 0.05$
+
+```{r}
+beta1_hat <- summary(fit)[["coefficients"]][, 1][2]
+se_beta1 <- summary(fit)[["coefficients"]][, 2][2]
+beta1_null <- -1
+t_star <- (beta1_hat - beta1_null) / se_beta1
+p_value <- 2 * pt(t_star, 13, lower.tail = F) 
+p_value
+
+
+par(las = 1)
+x_grid <- seq(-3.75, 3.75, 0.01)
+y_grid <- dt(x_grid, 13)
+plot(x_grid, y_grid, type = "l", xlab = "Test statistic", ylab = "Density", xlim = c(-3.75, 3.75))
+polygon(c(x_grid[x_grid < -t_star], rev(x_grid[x_grid < -t_star])),
+        c(y_grid[x_grid < -t_star], rep(0, length(y_grid[x_grid < -t_star]))), col = "skyblue")
+
+polygon(c(x_grid[x_grid > t_star], rev(x_grid[x_grid > t_star])),
+        c(y_grid[x_grid > t_star], rep(0, length(y_grid[x_grid > t_star]))), col = "skyblue")
+abline(v = t_star, lty = 2)
+abline(v = -t_star, lty = 2)
+abline(h = 0)
+```
+
+
+## Confidence Interval
+### $\beta_{1}$
+
+```{r}
+alpha = 0.05
+CI_beta1 <- c(beta1_hat - qt(1 - alpha / 2, 13) * se_beta1,
+              beta1_hat + qt(1 - alpha / 2, 13) * se_beta1)
+CI_beta1
+```
+
+### $Y_{h}|X_{h} = 40$
+
+```{r}
+Age_new = data.frame(Age = 40)
+hat_Y <- fit$coefficients[1] + fit$coefficients[2] * 40
+hat_Y
+predict(fit, Age_new, interval = "confidence") 
+predict(fit, Age_new, interval = "predict")
+```
+
+
+## Check
+
+```{r}
+sd <- sqrt((sum(fit$residuals^2) / 13))
+ME <- qt(1 - alpha / 2, 13) * sd * sqrt(1 + 1 / 15 + (40 - mean(Age))^(2) / sum((Age - mean(Age))^2))
+c(hat_Y - ME, hat_Y + ME)
+```
+
+
