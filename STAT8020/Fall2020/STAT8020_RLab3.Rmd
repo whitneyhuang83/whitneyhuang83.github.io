@@ -1,0 +1,204 @@
+---
+title: "STAT 8020 R Lab 3: Simple Linear Regression III"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 8.5
+    fig_height: 6.5
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Understanding Sampling Distributions and Confident Intervals via simulation
+
+Simulate the "data" $\{x_{i}, y_{i}\}_{i=1}^{n}$ where $y_{i} = \beta_{0}+\beta_{1}x_{i} + \varepsilon_{i}$, $\varepsilon \sim \mathrm{N}(0, \sigma^2)$. Repeat this process $N$ times.
+
+### Generate data in R
+
+```{r}
+set.seed(12)
+n = 30; beta0 = 3; beta1 = 1.5; N = 100; sigma2 = 1 
+x <- 3 + 5 * runif(n)
+set.seed(123)
+y <- replicate(N, beta0 + beta1 * x + rnorm(n, mean = 0, sd = sqrt(sigma2)))
+dim(y)
+```
+
+### Plot the first few simulated datasets
+
+```{r}
+for (i in 1:5){
+  plot(x, y[, i], pch = 16, las = 1, ylab = "y")
+  abline(3, 1.5, col = "blue", lwd = 1.5)
+}
+```
+
+### Estimate the $\beta_{0}$, $\beta_{1}$, and $\sigma^2$ for each simulated dataset 
+
+```{r}
+beta0_hat <- beta1_hat <- sigma2_hat <- se_beta1 <- numeric(N)
+for (i in 1:100){
+  fit <- lm(lm(y[, i] ~ x))
+  beta0_hat[i] <- summary(fit)[["coefficients"]][, 1][1]
+  beta1_hat[i] <- summary(fit)[["coefficients"]][, 1][2]
+  se_beta1[i] <- summary(fit)[["coefficients"]][, 2][2]
+  sigma2_hat[i] <- summary(fit)[["sigma"]]^2
+}
+```
+
+### Assess the estimation perfromance 
+
+```{r}
+boxplot(beta0_hat, las = 1, main = expression(hat(beta[0])))
+abline(h = beta0, col = "blue", lwd = 1.5)
+
+boxplot(beta1_hat, las = 1, main = expression(hat(beta[1])))
+abline(h = beta1, col = "blue", lwd = 1.5)
+
+boxplot(sigma2_hat, las = 1, main = expression(paste("Boxplot of ", hat(sigma)^2)))
+abline(h = sigma2, col = "blue", lwd = 1.5)
+```
+
+### Sampling distribution
+
+```{r}
+hist(beta1_hat, 16, col = "lightblue", border = "gray",
+     main = expression(paste("Histogram of ", hat(beta)[1])),
+     xlab = expression(hat(beta)[1]))
+abline(v = beta1, col = "blue", lwd = 1.5)
+mtext(expression(beta[1]), 1, at = beta1, col = "blue")
+```
+
+### CI's for all the simulated datasets
+
+```{r}
+t <- qt(1 - 0.05 / 2, n - 2)
+LL <- beta1_hat - t * se_beta1
+UL <- beta1_hat + t * se_beta1
+miss <- which((LL - beta1) * (UL - beta1) > 0)
+
+
+par(las = 1)
+plot(1:100, rep(beta1, N), type = "l", bty = "n", xaxt = "n", xlab = "",
+     lwd = 1.5, ylab = expression(hat(beta)[1]))
+for (i in 1:100){
+  segments(i, LL[i], i, UL[i], col = "blue")
+}
+
+for (i in miss){
+  segments(i, LL[i], i, UL[i], col = "red")
+}
+```
+
+
+## Maximum Heart Rate vs. Age Example
+
+### First Step: Load the data
+
+```{r}
+dat <- read.csv('http://whitneyhuang83.github.io/STAT8010/Data/maxHeartRate.csv', header = T) 
+head(dat)
+attach(dat)
+```
+
+## Fitting a simple linear regression
+
+```{r}
+fit <- lm(MaxHeartRate ~ Age)
+summary(fit)
+```
+
+
+## Confidence Interval
+### $\beta_{1}$
+
+```{r}
+alpha = 0.05
+beta1_hat <- summary(fit)[["coefficients"]][, 1][2]
+se_beta1 <- summary(fit)[["coefficients"]][, 2][2]
+CI_beta1 <- c(beta1_hat - qt(1 - alpha / 2, 13) * se_beta1,
+              beta1_hat + qt(1 - alpha / 2, 13) * se_beta1)
+CI_beta1
+```
+
+### $Y_{h}|X_{h} = 40$
+
+```{r}
+Age_new = data.frame(Age = 40)
+hat_Y <- fit$coefficients[1] + fit$coefficients[2] * 40
+hat_Y
+predict(fit, Age_new, interval = "confidence") 
+predict(fit, Age_new, interval = "predict")
+```
+
+
+### Check
+
+```{r}
+sd <- sqrt((sum(fit$residuals^2) / 13))
+ME <- qt(1 - alpha / 2, 13) * sd * sqrt(1 + 1 / 15 + (40 - mean(Age))^(2) / sum((Age - mean(Age))^2))
+c(hat_Y - ME, hat_Y + ME)
+```
+
+
+```{r}
+Age_grid = data.frame(Age = 18:72)
+CI_band <- predict(fit, Age_grid, interval = "confidence") 
+PI_band <- predict(fit, Age_grid, interval = "predict")
+
+plot(dat$Age, dat$MaxHeartRate, pch = 16, cex = 0.75,
+     xlab = "Age (Yr)", ylab = "Maximum Heart Rate (bpm)", las = 1)
+abline(fit, col = "blue")
+abline(v = mean(dat$Age), lty = 2, col = "gray")
+abline(h = mean(dat$MaxHeartRate), lty = 2, col = "gray")
+lines(18:72, CI_band[, 2], lty = 2, col = "blue")
+lines(18:72, CI_band[, 3], lty = 2, col = "blue")
+lines(18:72, PI_band[, 2], lty = 2, col = "darkgreen")
+lines(18:72, PI_band[, 3], lty = 2, col = "darkgreen")
+legend("topright", legend = c("CI", "PI"), col = c("blue", "darkgreen"),
+       lty = 2, bty = "n")
+```
+
+
+
+
+## Hypothesis Tests for $\beta_{1}$
+
+$H_{0}: \beta_{1} = -1$ vs. $H_{a}: \beta_{1} \neq -1$ with $\alpha = 0.05$
+
+```{r}
+beta1_null <- -1
+t_star <- (beta1_hat - beta1_null) / se_beta1
+p_value <- 2 * pt(t_star, 13, lower.tail = F) 
+p_value
+
+
+par(las = 1)
+x_grid <- seq(-3.75, 3.75, 0.01)
+y_grid <- dt(x_grid, 13)
+plot(x_grid, y_grid, type = "l", xlab = "Test statistic", ylab = "Density", xlim = c(-3.75, 3.75))
+polygon(c(x_grid[x_grid < -t_star], rev(x_grid[x_grid < -t_star])),
+        c(y_grid[x_grid < -t_star], rep(0, length(y_grid[x_grid < -t_star]))), col = "skyblue")
+
+polygon(c(x_grid[x_grid > t_star], rev(x_grid[x_grid > t_star])),
+        c(y_grid[x_grid > t_star], rep(0, length(y_grid[x_grid > t_star]))), col = "skyblue")
+abline(v = t_star, lty = 2)
+abline(v = -t_star, lty = 2)
+abline(h = 0)
+```
+
+## ANOVA
+
+
+```{r}
+anova(fit)
+```
+
