@@ -1,0 +1,84 @@
+---
+title: "STAT 8020 R Lab 4: Simple Linear Regression IV"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 8.5
+    fig_height: 6.5
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Maximum Heart Rate vs. Age Example
+
+### First Step: Load the data
+
+```{r}
+dat <- read.csv('http://whitneyhuang83.github.io/STAT8010/Data/maxHeartRate.csv', header = T) 
+head(dat)
+attach(dat)
+```
+
+## Fitting a simple linear regression
+
+```{r}
+fit <- lm(MaxHeartRate ~ Age)
+summary(fit)
+```
+
+## ANOVA
+
+### Partitioning total sums of squares
+
+```{r}
+par(las = 1)
+plot(Age, MaxHeartRate, pch = 16, cex = 0.75)
+abline(fit, col = "blue")
+abline(h = mean(MaxHeartRate), col = "gray", lty = 2)
+pred <- fit$coefficients[1] + fit$coefficients[2] * 65
+segments(65, mean(MaxHeartRate), 65, pred, col = "blue", lwd = 2)
+segments(65, pred, 65, 156, col = "red", lwd = 2)
+pred <- fit$coefficients[1] + fit$coefficients[2] * 19
+segments(19, mean(MaxHeartRate), 19, pred, col = "blue", lwd = 2)
+segments(19, pred, 19, 199, col = "red", lwd = 2)
+```
+
+
+```{r}
+anova(fit)
+```
+
+### F test
+
+```{r}
+par(las = 1)
+x_grid <- seq(0, 200, 0.1)
+y_grid <- df(x_grid, 1,  13)
+plot(x_grid, y_grid, type = "l", xlab = "Test statistic",
+     ylab = "Density", xlim = c(0, 160),
+     lwd = 1, main = "Null distribution of F test statistic")
+abline(v = 0, lty = 2, col = "gray", lwd = 0.5)
+F_star = 130.01
+polygon(c(x_grid[x_grid > F_star], rev(x_grid[x_grid > F_star])),
+        c(y_grid[x_grid > F_star], rep(0, length(y_grid[x_grid > F_star]))), col = "skyblue")
+abline(v = 130.01, col = "blue", lty = 2)
+abline(h = 0, col = "gray", lty = 2, lwd = 0.5)
+
+anova(fit)$"Pr(>F)"[1] == summary(fit)[["coefficients"]][, 4][2]
+```
+
+### Correlation and Coefficient of Determination
+
+```{r}
+cor(Age, MaxHeartRate)
+summary(fit)$ r.squared
+```
+
