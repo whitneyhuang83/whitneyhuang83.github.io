@@ -1,0 +1,197 @@
+---
+title: 'STAT 8010 R Lab 4: Data Summary/Visualization III'
+author: "Whitney Huang"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 8.5
+    fig_height: 6.5
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Interquartile range (IQR)
+
+```{r}
+data1 <- c(13, 18, 13, 14, 13, 16, 14, 21, 13)
+IQR(data1, type = 1)
+data2 <- c(13, 18, 13, 14, 13, 16, 14, 210, 13)
+IQR(data2, type = 1)
+```
+
+### Percentiles
+
+```{r}
+#Q1
+quantile(data1, 0.25, type = 1)
+#Q2 aka median
+quantile(data1, 0.5, type = 1)
+#Q3
+quantile(data1, 0.75, type = 1)
+
+
+data3 <- c(13, 18, 13, 14, 13, 16, 14, 21, 13, 9,
+           27, 18, 25, 20, 6)
+quantile(data3, c(0.35, 0.65), type = 1)
+```
+
+### Boxplot
+
+```{r}
+boxplot(data1)
+boxplot(data1, horizontal = T)
+```
+
+### Load the ORD flight dataset
+
+```{r}
+url <- "https://whitneyhuang83.github.io/STAT8010/Data/flights.csv"
+ORD <- read.csv(url, header = TRUE)
+```
+
+### Let's take a look at the data
+
+```{r}
+dim(ORD)
+n <- dim(ORD)[1]
+head(ORD)
+```
+
+### 2 way Frequency Table
+
+```{r}
+tab3 <- table(ORD[, c("carrier", "origin")])
+tab3
+
+tab4 <- table(ORD[, c("carrier", "origin")])/n
+tab4
+```
+
+### Stacked/dodged bar chart
+
+```{r}
+## Stacked bar chart
+barplot(tab3, xlab = "Origin", col = c("darkblue","red"), args.legend = list(x = "topleft"), las = 1)
+legend("topleft", legend = c("UA", "AA"),
+       pch = 15, col = c("red", "blue"), bty = "n", cex = 1.25, title = "Carrier")
+
+## Dodged bar chart
+barplot(tab3, xlab = "Origin", col = c("darkblue","red"), args.legend = list(x = "topleft"), las = 1, beside = T)
+legend("topleft", legend = c("UA", "AA"),
+       pch = 15, col = c("red", "blue"), bty = "n", cex = 1.25, title = "Carrier")
+```
+
+### Qualitative vs Quantitative: Side by Side Boxplots
+
+```{r}
+attach(ORD)
+library(tidyverse)
+boxplot(arr_delay ~ carrier, filter(ORD, arr_delay > 10), boxwex = 0.35,
+        col = c("blue", "red"),
+        staplewex = 0.35, outwex = 0.35,
+        cex.axis = 1.5, las = 1, log = "y",
+        outcol = c("blue", "red"),
+        outcex = 0.35, main = "Arrival Delay vs. Carrier")
+abline(h = 11, lty = 2, col = "gray")
+```
+
+### Quantitative vs Quantitative: Scatter Plot
+
+```{r}
+url <- "https://whitneyhuang83.github.io/STAT8010/Data/maxHeartRate.csv"
+dat <- read.csv(url, header = TRUE)
+
+par(las = 1, mar = c(4.1, 4.1, 1.1, 1.1))
+plot(dat$Age, dat$MaxHeartRate, pch = 16, xlab = "Age", ylab = "Max heart rate (bpm)")
+grid()
+```
+
+
+### Visualizing Time Series Data: Mauna Loa Atmospheric CO2 Concentration
+
+Atmospheric concentrations of $\text{CO}_{2}$ are expressed in parts per million (ppm) and reported in the preliminary 1997 SIO manometric mole fraction scale.
+
+
+```{r}
+data("co2")
+par(las = 1)
+ts.plot(co2, ylab = expression(paste(CO[2], " (ppm)")))
+
+time <- seq(1959, 1998, len = 468)
+plot(time[1:36], co2[1:36], type = "l", xlab = "Year",
+     ylab = expression(paste(CO[2], " (ppm)")),
+     las = 1)
+
+plot(time[445:468], co2[445:468], type = "l", xlab = "Year",
+     ylab = expression(paste(CO[2], " (ppm)")),
+     las = 1)
+```
+
+### Visualizing  Cross-Sectional Data
+
+```{r}
+library(maps)
+library(ggmap)
+data("USArrests")
+USArrests$region <- tolower(row.names(USArrests))
+
+statesMap <- map_data("state")
+str(statesMap)
+
+murderMap <- merge(statesMap, USArrests, by = "region")
+str(murderMap)
+
+ggplot(murderMap, aes(x = long, y = lat, group = group, fill = Murder)) + geom_polygon(color = "black") + scale_fill_gradient(low = "lightblue", high = "red", guide = "legend")
+```
+
+### Visualizing Spatio-Temporal Data: ERA-Interim
+
+The ERA-Interim is a global atmospheric reanalysis dataset. Reanalysis is an approach to
+produce spatially and temporally gridded datasets via data assimilation for climate monitoring and analysis.
+
+```{r}
+load("ERA_tmx_2010_JanFeb.RData")
+library(fields)
+par(mar = c(4.6, 4.1, 2.1, 0))
+for (i in seq(1:5)){
+        image.plot(lon, lat, tmx_dat[,, i], las = 1, main = format(day[i], "%m/%d/%Y"))
+        map("state", xlim = range(lon), ylim = range(lat),
+            add = T)
+        map("world", xlim = range(lon), ylim = range(lat),
+            add = T)      
+}
+```
+
+
+```{r, eval=FALSE}
+library(animation)
+saveLatex({
+  for (i in 1:58){
+          image.plot(lon, lat, tmx_dat[,, i], las = 1, main = format(day[i], "%m/%d/%Y"),
+                     zlim = range(tmx_dat))
+          map("state", xlim = range(lon), ylim = range(lat), add = T)
+          map("world", xlim = range(lon), ylim = range(lat), add = T)
+  }
+}, img.name = "ERA_Tmax", ani.opts = "controls,width=0.975\\textwidth",
+latex.filename = ifelse(interactive(), "ERA_TMX_JanFeb.tex", ""),
+interval = 0.5, nmax = 58, ani.dev = "pdf", ani.type = "pdf", ani.width = 8,
+ani.height = 6, documentclass = paste("\\documentclass{article}",
+                                     "\\usepackage[papersize={8in,6in},margin=0.1in]{geometry}",
+                                     sep = "\n"))
+```
+
+
+
+
+
+
+
+
+
