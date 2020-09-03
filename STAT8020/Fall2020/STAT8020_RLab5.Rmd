@@ -1,0 +1,181 @@
+---
+title: "STAT 8020 R Lab 5: Multiple Linear Regression I"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 8.5
+    fig_height: 6.5
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Species diversity on the Galapagos Islands
+
+### First Step: Load the data
+
+```{r}
+#installinstall.packages("faraway")
+library(faraway)
+data(gala)
+
+gala
+
+#Out the data in csv
+#write.csv(gala, file = "gala.csv")
+```
+
+### Plot the pairwise scatterplots
+
+```{r}
+plot(gala[, -2], cex = 0.75, col = "blue", las = 1)
+```
+
+### Correlation matrix
+
+```{r}
+cor(gala[, -2])
+```
+
+### Model 1: Fitting a simple linear regression
+
+Here we use *Elevation* as the predictor as it has the highest correlation with *Species*
+
+```{r}
+M1 <- lm(Species ~ Elevation, data = gala)
+summary(M1)
+```
+
+### Model 2: Adding *Area*
+
+```{r}
+M2 <- lm(Species ~ Elevation + Area, data = gala)
+summary(M2)
+```
+
+### Model 3: Adding *Adjacent*
+
+```{r}
+M3 <- lm(Species ~ Elevation + Area + Adjacent, data = gala)
+summary(M3)
+```
+
+### Full Model
+
+```{r}
+M4 <- lm(Species ~ Elevation + Area + Adjacent + Nearest + Scruz, data = gala)
+summary(M4)
+```
+
+### Parameter Estimation
+
+```{r}
+X <- model.matrix(M4)
+y <- gala$Species
+# regression parameters
+beta_hat <- solve(t(X) %*% X) %*% t(X) %*% y
+#beta_hat_faster <- solve(crossprod(X), crossprod(X, y))
+# fitted values
+y_hat <- X %*% solve(t(X) %*% X) %*% t(X) %*% y
+```
+
+### ANOVA
+
+```{r}
+anova(M4)
+```
+
+### General Linear Test
+
+```{r}
+anova(M1, M2)
+
+par(las = 1, mar = c(4.1, 4.1, 1.1, 1.1))
+xg <- seq(0, 3, 0.01)
+yg <- df(xg, 1, 27)
+plot(xg, yg, type = "l", xaxs = "i", yaxs = "i", lwd = 1.6,
+     xlab = "F test statistic", ylab = "Density")
+abline(v = 0.5254, lty = 2, col = "gray")
+polygon(c(xg[xg > 0.5254], rev(xg[xg > 0.5254])),
+        c(yg[xg > 0.5254], rep(0, length(yg[xg > 0.5254]))),
+        col = "skyblue")
+```
+
+## Simulation
+
+### $R^2$ vs. $R^{2}_{adj}$
+
+```{r}
+set.seed(123)
+N = 500
+x1 <- replicate(N, rnorm(30))
+x2 <- replicate(N, rnorm(30))
+y1 <- apply(x1, 2, function(x) 5 + 2 * x + rnorm(30, 0, 1))
+R.sq <- array(dim = c(N, 4))
+for (i in 1:N){
+  R.sq[i, 1] = summary(lm(y1[, i] ~ x1[, i]))$r.squared
+  R.sq[i, 2] = summary(lm(y1[, i] ~ x1[, i]))$adj.r.squared
+  R.sq[i, 3] = summary(lm(y1[, i] ~ x1[, i] + x2[, i]))$r.squared
+  R.sq[i, 4] = summary(lm(y1[, i] ~ x1[, i] + x2[, i]))$adj.r.squared
+}
+
+
+par(las = 1)
+plot(R.sq[, 1], R.sq[, 3], pch = 16, cex = 0.65, col = "blue",
+     xlab = expression(paste("Model 1: ", R^2)),
+     ylab = expression(paste("Model 2: ", R^2)))
+abline(0, 1)
+
+boxplot(R.sq[, 3] - R.sq[, 1], las = 1)
+abline(h = 0, lty = 2, col = "red")
+
+par(las = 1, mfrow = c(1, 2), mar = c(5.1, 4.6, 1.1, 1.1))
+plot(R.sq[, 1], R.sq[, 3], pch = 16, cex = 0.65, col = "blue",
+     xlab = expression(paste("Model 1: ", R^2)),
+     ylab = expression(paste("Model 2: ", R^2)))
+abline(0, 1)
+
+plot(R.sq[, 2], R.sq[, 4], pch = 16, cex = 0.5, col = "blue",
+     xlab = expression(paste("Model 1: ", R[adj]^2)),
+     ylab = expression(paste("Model 2: ", R[adj]^2)))
+abline(0, 1)
+
+boxplot(R.sq[, 3] - R.sq[, 1], R.sq[, 4] - R.sq[, 2], las = 1)
+abline(h = 0, lty = 2, col = "red")
+axis(1, at = 1:2, labels = c("R^2", "R^2_adj"))
+
+GLM_p <- numeric(500)
+
+for (i in 1:500){
+  reduce <- lm(y1[, i] ~ x1[, i])
+  full <- lm(y1[, i] ~ x1[, i] + x2[, i])
+  GLM_p[i] <- anova(reduce, full)$`Pr(>F)`[2]
+}
+
+hist(GLM_p, 30, las = 1)
+```
+
+### Multicollinearity
+
+```{r}
+library(MASS)
+
+x <- replicate(N, mvrnorm(n = 30, c(0, 0), matrix(c(1, 0.9, 0.9, 1), 2)))
+y <- array(dim = c(30, N))
+for (i in 1:N){
+  y[, i] = 4 + 0.8 * x[, 1, i] + 0.6 * x[, 2, i] + rnorm(30)
+}
+beta <- array(dim = c(3, N))
+for (i in 1:N){
+  beta[, i] <- lm(y[, i] ~ x[, 1, i] + x[, 2, i])$coefficients
+}
+```
+
+
