@@ -1,0 +1,170 @@
+---
+title: "STAT 8020 R Lab 7: Multiple Linear Regression III"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 8.5
+    fig_height: 6.5
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Multicollinearity
+
+### Simulation
+
+```{r}
+library(MASS)
+N = 500
+x <- replicate(N, mvrnorm(n = 30, c(0, 0), matrix(c(1, 0.9, 0.9, 1), 2)))
+y <- array(dim = c(30, N))
+for (i in 1:N){
+  y[, i] = 4 + 0.8 * x[, 1, i] + 0.6 * x[, 2, i] + rnorm(30)
+}
+beta <- array(dim = c(3, N))
+for (i in 1:N){
+  beta[, i] <- lm(y[, i] ~ x[, 1, i] + x[, 2, i])$coefficients
+}
+
+R.sq_M1 <- numeric(N)
+for (i in 1:N){
+  R.sq_M1[i] <- summary(lm(y[, i] ~ x[, 1, i] + x[, 2, i]))$r.squared
+}
+
+summary(R.sq_M1)
+
+
+plot(beta[2,], beta[3,], pch = 16, cex = 0.5,
+     xlab = expression(beta[1]),
+     ylab = expression(beta[2]), las = 1)
+points(0.8, 0.6, pch = "*", cex = 3, col = "red")
+abline(h = 0, lty = 2, col = "gray")
+abline(v = 0, lty = 2, col = "gray")
+
+library(fields)
+quilt.plot(beta[2,], beta[3, ], R.sq_M1)
+points(0.8, 0.6, pch = "*", cex = 3)
+abline(h = 0, lty = 2, col = "gray")
+abline(v = 0, lty = 2, col = "gray")
+
+
+x1 <- replicate(N, mvrnorm(n = 30, c(0, 0), matrix(c(1, 0, 0, 1), 2)))
+y1 <- array(dim = c(30, N))
+for (i in 1:N){
+  y1[, i] = 4 + 0.8 * x1[, 1, i] + 0.6 * x1[, 2, i] + rnorm(30)
+}
+beta1 <- array(dim = c(3, N))
+for (i in 1:N){
+  beta1[, i] <- lm(y1[, i] ~ x1[, 1, i] + x1[, 2, i])$coefficients
+}
+
+plot(beta1[2,], beta1[3,], pch = 16, cex = 0.5,
+     xlab = expression(beta[1]),
+     ylab = expression(beta[2]), las = 1)
+points(0.8, 0.6, pch = "*", cex = 3, col = "red")
+abline(h = 0, lty = 2, col = "gray")
+abline(v = 0, lty = 2, col = "gray")
+
+R.sq_M2 <- numeric(N)
+for (i in 1:N){
+  R.sq_M2[i] <- summary(lm(y1[, i] ~ x1[, 1, i] + x1[, 2, i]))$r.squared
+}
+summary(R.sq_M2)
+
+library(fields)
+quilt.plot(beta1[2,], beta1[3, ], R.sq_M1)
+points(0.8, 0.6, pch = "*", cex = 3)
+abline(h = 0, lty = 2, col = "gray")
+abline(v = 0, lty = 2, col = "gray")
+```
+
+## Species diversity on the Galapagos Islands
+
+```{r}
+library(faraway)
+data(gala)
+```
+
+### Plot the pairwise scatterplots
+
+```{r}
+galaNew <- gala[, -2]
+plot(galaNew, cex = 0.75, col = "blue", las = 1)
+```
+
+### Correlation matrix
+
+```{r}
+cor(galaNew)
+```
+
+### Variance inflation factor
+
+```{r}
+m <- lm(Species ~ ., data = galaNew)
+vif(m)
+
+## Check
+r.sq_ele <- summary(lm(Elevation ~ Area + Nearest + Scruz + Adjacent, data = galaNew))$r.square 
+
+vif <- 1 / (1 - r.sq_ele)
+```
+
+
+## Model Selection
+
+```{r}
+library(tidyverse)
+library(caret)
+library(leaps)
+models <- regsubsets(Species ~ ., data = galaNew, nvmax = 5)
+summary(models)
+
+res.sum <- summary(models)
+
+criteria <- data.frame(
+  Adj.R2 = res.sum$adjr2,
+  Cp = res.sum$cp,
+  BIC = res.sum$bic)
+
+criteria
+
+full <- lm(Species ~ ., data = galaNew)
+step(full)
+step(full, direction = "backward")
+```
+
+## Model Diagnostics
+
+```{r}
+mod <- lm(Species ~ Elevation + Adjacent, data = galaNew)
+plot(mod$fitted.values, galaNew$Species, pch = 16, col = "blue")
+abline(0, 1, col = "red")
+
+plot(mod$fitted.values, mod$residuals, pch = 16, col = "blue")
+abline(h = 0, col = "red")
+
+par(las = 1)
+hist(mod$residuals, 12, prob = T,
+     col = "lightblue", border = "gray")
+xg <- seq(-200, 200, 1)
+yg <- dnorm(xg, 0, 60.86)
+lines(xg, yg)
+
+
+plot(qnorm(1:30 / 31, 0, 60.86), sort(mod$residuals), pch = 16,
+     col = "gray", xlab = "Normal Quantiles", ylab = "Residuals")
+abline(0, 1)
+```
+
+
+
