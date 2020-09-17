@@ -1,0 +1,101 @@
+---
+title: 'STAT 8010 R Lab 5: Binomial, Hypergeometric, and Normal Distributions '
+author: "Whitney Huang"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 8.5
+    fig_height: 6.5
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Binomial distribution
+
+The probability mass function of a binomial random variable with parameters $n$, the number of trials, and $p$, the success probability of every trial is
+$$p_{X}(x) = \binom{n}{x}(p)^{x}(1-p)^{n-x},\, x = 0, 1, \cdots, n$$
+
+
+## ESP example
+
+To test for Extrasensory perception (ESP), we have 4 cards. They will be shuffled and one randomly selected each time,
+and you are to guess which card is selected. This is repeated 10 times. Suppose you do not have
+ESP. Let $R$ be the number of times you guess a card correctly. What are the distribution
+and parameter(s) of $R$? What is the expected value of $R$? Furthermore, suppose that you
+get certified as having ESP if you score at least an 8 on the test. What is the probability
+that you get certified as having ESP?
+
+```{r}
+n = 10; p = 1 / 4
+choose(10, 8)
+
+#P(R=8)
+choose(n, 8) * p^8 * (1 - p)^(n - 8) 
+dbinom(8, n, p)
+sum(dbinom(8:10, n, p)) # P(R=8) + P(R=9) + P(R=10)
+1 - pbinom(7, n, p) # 1 - (P(R=0) + P(R=1) + ... +P(R=7))
+pbinom(7, n, p, lower.tail = F) # P(R=8) + P(R=9) + P(R=10)
+```
+
+## Coke blind taste test
+
+What is the probability that $X$ is at least 1?
+```{r}
+n = 4; p = .95
+1 - 0.05^4
+1 - dbinom(0, n, p)
+```
+
+What is the probability that $X$ is at most 3?
+
+```{r}
+sum(dbinom(0:3, n, p))
+pbinom(3, n, p)
+```
+
+## General continuous random variable
+
+```{r}
+x <- seq(1, 4, 0.01)
+fx <- (4 * x - x^2) / 9
+
+plot(x, fx, type = "l", las = 1, xlim = c(0, 5))
+segments(1, 0, 1, 1 / 3)
+abline(h = 0)
+polygon(c(x, rev(x)), c(fx, rep(0, length(fx))), col = "skyblue")
+abline(v = 2.25, lwd = 2, col = "red")
+axis(3, at = 2.25, labels = "Mean", line = 0, col = "red",
+     lwd = 2)
+axis(1, at = 2.25, line = -1, col = "red")
+abline(v = 1.75, lty = 2); abline(v = 2.75, lty = 2)
+```
+
+## Normal distribution
+
+1. $\Phi(0)=.50\Rightarrow$} Mean and Median ($50_{th}$ percentile) for standard normal are both $0$
+
+2. $\Phi(-z)=1-\Phi(z)$}
+
+3. $\mathbb{P}(Z>z)=1-\Phi(z)=\Phi(-z)$}
+
+```{r}
+pnorm(0)
+
+pnorm(-1)
+
+1 - pnorm(1)
+
+pnorm(1, lower.tail = F)
+
+pnorm(-1.75)
+pnorm(2) - pnorm(-2)
+```
+
+
