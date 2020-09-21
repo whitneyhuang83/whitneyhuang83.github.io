@@ -1,0 +1,191 @@
+---
+title: "STAT 8020 R Lab 10: Multiple Linear Regression VI"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 8.5
+    fig_height: 6.5
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Regression with Both Quantitative and Qualitative Predictors: Salaries for Professors Data Set
+
+The 2008-09 nine-month academic salary for Assistant Professors, Associate Professors and Professors in a college in the U.S. The data were collected as part of the on-going effort of the college's administration to monitor salary differences between male and female faculty members.
+
+### Load and plot the data
+
+```{r}
+library(carData)
+data("Salaries")
+attach(Salaries) 
+head(Salaries)
+summary(Salaries)
+boxplot(salary ~ sex, data = Salaries, las = 1)
+boxplot(salary ~ discipline, data = Salaries, las = 1)
+boxplot(salary ~ rank, data = Salaries, las = 1)
+xtabs(~ sex + rank + discipline, data = Salaries)
+plot(yrs.since.phd, salary, las = 1, pch = 16, cex = 0.75,
+     xlab = "Years of service", ylab = "9-month salary")
+grid()
+```
+
+### Model fitting 
+
+```{r}
+m1 <- lm(salary ~ discipline + rank + sex + yrs.since.phd, data = Salaries)
+X <- model.matrix(m1)
+summary(m1)
+
+plot(m1, which = 1, cex = 0.4)
+
+yr.range <- tapply(yrs.since.phd, list(discipline, sex, rank), range)
+sex.col <- ifelse(sex == "Male", "blue", "red")
+dis.col <- ifelse(discipline == "A", 16, 1)
+
+beta0 <- m1$coefficients[1]
+betaDisp <- m1$coefficients[2]
+betaAssoc <- m1$coefficients[3]
+betaProf <- m1$coefficients[4]
+betaMale <- m1$coefficients[5]
+beta1 <- m1$coefficients[6]
+
+library(scales)
+# Plot the model fits by rank
+assistant <- which(rank == "AsstProf")
+
+plot(yrs.since.phd[assistant], salary[assistant],
+     pch = dis.col[assistant], cex = 0.8,
+     col = alpha(sex.col[assistant], 0.5),
+     yaxt = "n", xlab = "Years of service",
+     main = "9-month salary", ylab = "")
+axis(2, at = seq(63000, 99000, len = 6),
+     labels = paste(seq(63000, 99000, len = 6)/ 1000, "k"),
+     las = 1)
+
+segments(yr.range[[1]][1], beta0 + yr.range[[1]][1] * beta1,
+         yr.range[[1]][2], beta0 + yr.range[[1]][2] * beta1,
+         col = "red", lwd = 1.8)
+segments(yr.range[[2]][1], beta0 + betaDisp + yr.range[[2]][1] * beta1,
+         yr.range[[2]][2], beta0 + betaDisp + yr.range[[2]][2] * beta1,
+         col = "red", lty = 2, lwd = 1.8)
+segments(yr.range[[3]][1], beta0 + betaMale + yr.range[[3]][1] * beta1,
+         yr.range[[3]][2], beta0 + betaMale + yr.range[[3]][2] * beta1,
+         col = "blue", lwd = 1.8)
+segments(yr.range[[4]][1], beta0 + betaDisp + betaMale + yr.range[[4]][1] * beta1,
+         yr.range[[4]][2], beta0 + betaDisp + betaMale + yr.range[[4]][2] * beta1,
+         col = "blue", lty = 2, lwd = 1.8)
+
+assoc <- which(rank == "AssocProf")
+plot(yrs.since.phd[assoc], salary[assoc],
+     pch = dis.col[assoc], cex = 0.8,
+     col = alpha(sex.col[assoc], 0.5),
+     yaxt = "n", xlab = "Years of service",
+     main = "9-month salary", ylab = "")
+axis(2, at = seq(62000, 127000, len = 6),
+     labels = paste(seq(62000, 127000, len = 6)/ 1000, "k"),
+     las = 1)
+
+segments(yr.range[[5]][1], beta0 + betaAssoc + yr.range[[5]][1] * beta1,
+         yr.range[[5]][2], beta0 + betaAssoc + yr.range[[5]][2] * beta1,
+         col = "red", lwd = 1.8)
+segments(yr.range[[6]][1], beta0 + betaDisp + betaAssoc + yr.range[[6]][1] * beta1,
+         yr.range[[6]][2], beta0 + betaDisp + betaAssoc + yr.range[[6]][2] * beta1,
+         col = "red", lty = 2, lwd = 1.8)
+segments(yr.range[[7]][1], beta0 + betaAssoc + betaMale + yr.range[[7]][1] * beta1,
+         yr.range[[7]][2], beta0 + betaAssoc + betaMale + yr.range[[7]][2] * beta1,
+         col = "blue", lwd = 1.8)
+segments(yr.range[[8]][1], beta0 + betaDisp + betaAssoc + betaMale + yr.range[[8]][1] * beta1,
+         yr.range[[8]][2], beta0 + betaDisp + betaAssoc + betaMale + yr.range[[8]][2] * beta1,
+         col = "blue", lty = 2, lwd = 1.8)
+
+prof <- which(rank == "Prof")
+plot(yrs.since.phd[prof], salary[prof],
+     pch = dis.col[prof], cex = 0.8,
+     col = alpha(sex.col[prof], 0.5),
+     yaxt = "n", xlab = "Years of service",
+     main = "9-month salary", ylab = "")
+axis(2, at = seq(57000, 232000, len = 6),
+     labels = paste(seq(57000, 232000, len = 6)/ 1000, "k"),
+     las = 1)
+
+segments(yr.range[[9]][1], beta0 + betaProf + yr.range[[9]][1] * beta1,
+         yr.range[[9]][2], beta0 + betaProf + yr.range[[9]][2] * beta1,
+         col = "red", lwd = 1.8)
+segments(yr.range[[10]][1], beta0 + betaDisp + betaProf + yr.range[[10]][1] * beta1,
+         yr.range[[10]][2], beta0 + betaDisp + betaProf + yr.range[[10]][2] * beta1,
+         col = "red", lty = 2, lwd = 1.8)
+segments(yr.range[[11]][1], beta0 + betaProf + betaMale + yr.range[[11]][1] * beta1,
+         yr.range[[11]][2], beta0 + betaProf + betaMale + yr.range[[11]][2] * beta1,
+         col = "blue", lwd = 1.8)
+segments(yr.range[[12]][1], beta0 + betaDisp + betaProf + betaMale + yr.range[[12]][1] * beta1,
+         yr.range[[12]][2], beta0 + betaDisp + betaProf + betaMale + yr.range[[12]][2] * beta1,
+         col = "blue", lty = 2, lwd = 1.8)
+
+
+
+m2 <- lm(salary ~ sex * yrs.since.phd)
+summary(m2)
+coeff <- m2$coefficients
+plot(yrs.since.phd, salary, las = 1, pch = 16, cex = 0.5, col = alpha(sex.col, 0.5),
+     xlab = "Years of service", ylab = "9-month salary")
+grid()
+abline(coeff[1], coeff[3], col = "red")
+abline(coeff[1] + coeff[2], coeff[3] + coeff[4],
+       col = "blue")
+legend("toplef", legend = c("Female", "Male"),
+       pch = 16, col = c("red", "blue"),
+       bty = "n")
+
+m3 <- lm(salary ~ discipline * yrs.since.phd)
+summary(m3)
+coeff <- m3$coefficients
+plot(yrs.since.phd, salary, las = 1, pch = dis.col, cex = 0.5, col = alpha(sex.col, 0.5),
+     xlab = "Years of service", ylab = "9-month salary")
+grid()
+abline(coeff[1], coeff[3], col = "red")
+abline(coeff[1] + coeff[2], coeff[3] + coeff[4],
+       col = "blue")
+legend("toplef", legend = c("Female", "Male"),
+       pch = 16, col = c("red", "blue"),
+       bty = "n")
+```
+
+## Polynomial regression: Housing Values in Suburbs of Boston
+
+```{r}
+library(MASS)
+data(Boston)
+
+plot(Boston$lstat, Boston$medv, col = "gray", pch = 16,
+     cex = 0.6, las = 1, xlab = "lower status of the population (percent)", ylab = "median value of owner-occupied homes")
+
+m1 <- lm(medv ~ lstat, data = Boston)
+abline(m1)
+
+m2 <- lm(medv ~ lstat + I(lstat^2), data = Boston)
+lines(sort(Boston$lstat), m2$fitted.values[order(Boston$lstat)], col = "red")
+
+m3 <- lm(medv ~ lstat + I(lstat^2)+ I(lstat^3), data = Boston)
+lines(sort(Boston$lstat), m3$fitted.values[order(Boston$lstat)], col = "blue")
+
+anova(m2, m3)
+
+m2new <- lm(medv ~ poly(lstat, 2), data = Boston)
+m3new <- lm(medv ~ poly(lstat, 3), data = Boston)
+summary(m3new)
+
+anova(m2new, m3new)
+```
+
+
+
