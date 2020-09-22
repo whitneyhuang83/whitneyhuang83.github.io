@@ -1,0 +1,114 @@
+---
+title: 'STAT 8010 R Lab 6: Normal Distributions '
+author: "Whitney Huang"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 8.5
+    fig_height: 6.5
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Normal distribution
+
+### Normal density curve
+
+```{r}
+xg <- seq(-3.5, 3.5, 0.01)
+yg <- dnorm(xg)
+
+par(las = 1)
+plot(xg, yg, type = "l", xlab = "",
+     ylab = "Probability Density",
+     col = "blue", xaxt = "n",
+     yaxt = "n", yaxs = "i",
+     ylim = c(0, 0.45))
+abline(v = 0, lty = 2)
+axis(1, at = 0, label = expression(mu),
+     tick = F, line = -1)
+axis(1, at = 0, label = "median", line = 0,
+     tick = F)
+axis(1, at = 0, label = "mode", line = 1,
+     tick = F)
+axis(1, at = -3.5, labels = expression(paste("curve extends to ", -infinity)), cex.axis = 0.7)
+axis(1, at = 3.5, labels = expression(paste("curve extends to ", infinity)), cex.axis = 0.7)
+segments(0, dnorm(1), -1, col = "gray")
+segments(0, dnorm(1), 1, col = "gray")
+segments(-1, dnorm(1), -1, 0, lty = 2,
+         col = "gray")
+segments(1, dnorm(1), 1, 0, lty = 2,
+         col = "gray")
+axis(1, at = -1, label = expression(mu - sigma), tick = F, cex.axis = 0.8, line = -1)
+axis(1, at = 1, label = expression(mu + sigma), tick = F, cex.axis = 0.8, line = -1)
+```
+
+### Standard Normal: $\mathrm{Z} ~ \mathrm{N}(0, 1)$
+
+We use $\Phi(\cdot)$ to denote the cdf of the standard normal distribution
+
+1. $\Phi(0)=.50\Rightarrow$} *Mean* and *Median* ($50_{th}$ percentile) for standard normal are both $0$
+
+2. $\Phi(-z)=1-\Phi(z)$}
+
+3. $\mathbb{P}(Z>z)=1-\Phi(z)=\Phi(-z)$}
+
+```{r}
+pnorm(0)
+pnorm(-1)
+1 - pnorm(1)
+pnorm(1, lower.tail = F)
+
+pnorm(-1.75)
+pnorm(2) - pnorm(-2)
+pnorm(0.5)
+```
+
+### STAT 8020 exam score example
+
+```{r}
+mu = 78; sigma2 = 36
+1 - pnorm(84, mu, sqrt(sigma2))
+
+(pnorm(84, mu, sqrt(sigma2)) - pnorm(75, mu, sqrt(sigma2))) / (1 - pnorm(75, mu, sqrt(sigma2)))
+```
+
+### Standard normal percentiles
+
+```{r}
+qnorm(c(.1, .55, .9))
+```
+
+## General normal percentiles
+
+```{r}
+qnorm(.8, 20, 7)
+20 + 7 * qnorm(.8)
+```
+
+## Normal approximation of Binomial Distribution
+
+```{r}
+n = 400; p = 0.93
+sum(dbinom(370:373, n, p))
+pbinom(373, n, p) - pbinom(369, n, p)
+
+mu = n * p; sigma = sqrt(n * p * (1 - p)) 
+pnorm(373.5, mu, sigma) - pnorm(369.5, mu, sigma)
+
+plot(0:400, dbinom(0:400, n, p), type = "h", las = 1,
+     xlim = c(344, 400), xlab = "x", ylab = "", col = "blue")
+xg <- seq(344, 400, 0.1); yg <- dnorm(xg, mu, sigma)
+lines(xg, yg, col = "blue", lty = 2)
+abline(v = c(369.5, 373.5), lty = 2, col = "red")
+lines(370:373, dbinom(370:373, n, p), type = "h", col = "red")
+```
+
