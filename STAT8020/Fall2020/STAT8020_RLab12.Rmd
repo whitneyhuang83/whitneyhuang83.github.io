@@ -1,0 +1,217 @@
+---
+title: "STAT 8020 R Lab 12: Adavnced Topics II"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 8.5
+    fig_height: 6.5
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Regression Tree
+
+Major League Baseball Hitters Data from the 1986–1987 season
+
+```{r}
+library(rpart)
+library(rpart.plot)
+library(ISLR)
+Hitters = na.omit(Hitters)
+head(Hitters)
+summary(Hitters)
+#Tree 1
+reg.tree <- rpart(Salary ~ Years + Hits, data = Hitters)
+rpart.plot(reg.tree, type = 4)
+#Tree 2
+reg.tree <- rpart(Salary ~ ., data = Hitters)
+rpart.plot(reg.tree, type = 4)
+```
+
+
+## Ridge Regression
+
+The rest of this lab is largely based on the R lab: Ridge Regression and the Lasso of the book "Introduction to Statistical Learning with Applications in R" by *Gareth James*, *Daniela Witten*, *Trevor Hastie* and *Robert Tibshirani*.
+We will use the `glmnet` package to perform ridge regression and
+the lasso to predict `Salary` on the `Hitters` data.
+
+### Data Setup
+
+```{r}
+library(glmnet)
+X <- model.matrix(Salary ~ ., data = Hitters)[, -1] 
+y <- Hitters$Salary
+```
+
+The `glmnet()` function has an alpha argument that determines what type
+of model is fit. If `alpha = 0` then a ridge regression model is fit, and if `alpha = 1` then a lasso model is fit. We first fit a ridge regression model, which minimizes 
+$$\sum_{i=1}^{n}(y_{i}-\beta_{0}-\sum_{j=1}^{p}\beta_{j}x_{ij})^2 +\color{blue}{\lambda\sum_{j=1}^{p}\beta_{j}^2},$$ where $\lambda\geq 0$ is a *tuning parameter* to be determined.
+
+### Fit Ridge Regression over a grid of $\lambda$ values
+
+```{r}
+grid <- 10^seq(10, -2, length = 100)
+ridge.mod <- glmnet(X, y, alpha = 0, lambda = grid)
+```
+
+### Ridge Regression Coefficents
+
+```{r}
+dim(coef(ridge.mod))
+```
+
+We expect the coefficient estimates to be much smaller, in terms of $\ell_2$ norm,
+when a large value of $\lambda$ is used. 
+
+```{r}
+ridge.mod$lambda[50] #Display 50th lambda value
+coef(ridge.mod)[, 50] # Display coefficients associated with 50th lambda value
+sqrt(sum(coef(ridge.mod)[-1, 50]^2)) # Calculate l2 norm
+```
+
+In contrast, here are the coefficients when $\lambda = 705$, along with their $\ell_2$
+norm. Note the much larger $l_2$ norm of the coefficients associated with this
+smaller value of $\lambda$.
+
+
+```{r}
+ridge.mod$lambda[60] #Display 60th lambda value
+coef(ridge.mod)[, 60] # Display coefficients associated with 60th lambda value
+sqrt(sum(coef(ridge.mod)[-1, 60]^2)) # Calculate l2 norm
+```
+
+We can use the `predict()` function for a number of purposes. For instance,
+we can obtain the ridge regression coefficients for a new value of $\lambda$, say 50:
+
+```{r}
+predict(ridge.mod, s = 50, type = "coefficients")[1:20, ]
+```
+
+### Training/Testing
+
+We now split the samples into a training set and a test set in order
+to estimate the test error of ridge regression and later on the lasso.
+
+```{r}
+set.seed(1)
+train <- sample(1:nrow(X), nrow(X) / 2)
+test <- (-train)
+y.test <- y[test]
+
+# Fit Ridge regression to the training data
+ridge.mod <- glmnet(X[train,], y[train], alpha = 0, lambda = grid, thresh = 1e-12)
+# Predcit the salary to the testing data with lambda = 4
+ridge.pred <- predict(ridge.mod, s = 4, newx = X[test,])
+# Calculate the Root Mean Square Error (RMSE)
+sqrt(mean((ridge.pred - y.test)^2))
+# Compute the RMSE for the intercept-only model
+sqrt(mean((mean(y[train]) - y.test)^2))
+# Change to a much larger lambda
+ridge.pred <- predict(ridge.mod, s = 1e10, newx = X[test,])
+sqrt(mean((ridge.pred - y.test)^2))
+# Change lambda to 0
+ridge.pred <- predict(ridge.mod, s = 0, newx = X[test,])
+sqrt(mean((ridge.pred - y.test)^2))
+
+lm(y ~ X, subset = train)
+predict(ridge.mod, s = 0, type = "coefficients")[1:20,]
+```
+
+
+Instead of arbitrarily choosing $\lambda = 4$, it would be better to
+use cross-validation (CV) to choose the tuning parameter $\lambda$. We can do this using
+the built-in cross-validation function, `cv.glmnet()`. By default, the function
+performs 10-fold cross-validation, though this can be changed using the
+argument `folds`.
+
+### Cross-Validation (CV)
+
+```{r}
+set.seed(1)
+# Fit ridge regression model on training data
+cv.out <- cv.glmnet(X[train,], y[train], alpha = 0) 
+# Select lamda that minimizes training MSE
+bestLambda = cv.out$lambda.min  
+bestLambda
+
+ridge.pred <- predict(ridge.mod, s = bestLambda, newx = X[test,])
+sqrt(mean((ridge.pred - y.test)^2))
+
+plot(cv.out) # Draw plot of training MSE as a function of lambda
+```
+
+Finally, we refit our ridge regression model on the full data set,
+using the value of $\lambda$ chosen by cross-validation, and examine the coefficient estimates.
+
+```{r}
+# Fit ridge regression model on full dataset
+out <- glmnet(X, y, alpha = 0)
+# Display coefficients using lambda chosen by CV
+predict(out, type = "coefficients", s = bestLambda)[1:20,] 
+```
+
+## The Lasso 
+
+We saw that ridge regression with a wise choice of $\lambda$ can outperform least
+squares as well as the null model on the Hitters data set. We now ask
+whether the lasso, which minimizes 
+$$\sum_{i=1}^{n}(y_{i}-\beta_{0}-\sum_{j=1}^{p}\beta_{j}x_{ij})^2 +\color{blue}{\lambda\sum_{j=1}^{p}|\beta_{j}|}$$
+can yield either a more accurate or a more interpretable
+model than ridge regression. In order to fit a lasso model, we once again
+use the `glmnet()` function; however, this time we use the argument `alpha=1`.
+
+
+```{r}
+# Fit lasso model on training data
+lasso.mod <- glmnet(X[train,], y[train], alpha = 1, lambda = grid) 
+# Draw plot of coefficients
+plot(lasso.mod, las = 1)    
+```
+
+Notice that in the coefficient plot that depending on the choice of tuning
+parameter, some of the coefficients are exactly equal to zero. We now
+perform cross-validation and compute the associated test error:
+
+
+```{r}
+set.seed(1)
+# Fit lasso model on training data
+cv.out <- cv.glmnet(X[train,], y[train], alpha = 1) 
+# Draw plot of training MSE as a function of lambda
+plot(cv.out) 
+# Select lamda that minimizes training MSE
+bestLambda <- cv.out$lambda.min 
+# Use best lambda to predict test data
+lasso.pred <- predict(lasso.mod, s = bestLambda, newx = X[test,]) 
+# Calculate test RMSE
+sqrt(mean((lasso.pred - y[test])^2)) 
+```
+
+This is substantially lower than the test set RMSE of the null model and of
+least squares, and very similar to the test RMSE of ridge regression with $\lambda$
+chosen by cross-validation.
+
+However, the lasso has a substantial advantage over ridge regression in
+that the resulting coefficient estimates are sparse. Here we see that 8 of
+the 19 coefficient estimates are exactly zero:
+
+
+```{r}
+# Fit lasso model on full dataset
+out <- glmnet(X, y, alpha = 1, lambda = grid) 
+# Display coefficients using lambda chosen by CV
+lasso.coef <- predict(out, type = "coefficients", s = bestLambda)[1:20,] 
+lasso.coef
+lasso.coef[lasso.coef != 0] # Display only non-zero coefficients
+```
+
