@@ -1,0 +1,142 @@
+---
+title: "STAT 8020 R Lab 13: Inference for Proportions"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 8.5
+    fig_height: 6.5
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Cancer treatment survival rate
+
+Researchers in the development of new treatments for cancer patients often
+evaluate the effectiveness of new therapies by reporting the *proportion* of patients who survive for a specified period of time after completion of the treatment. A new genetic treatment of 870 patients with a particular type of cancer resulted in 330 patients surviving at least 5 years after treatment. *Estimate* the proportion of all patients with the specified type of cancer who would survive at least 5 years after being administered this treatment.
+
+```{r, message=FALSE}
+n = 870; x = 330 
+# point estimate
+phat <- x / n
+phat
+# 95% CI for p
+library(fastR)
+wald.ci(x, n)
+# 99% CI for p
+wald.ci(x, n, conf.level = 0.99)
+```
+
+## Bird flu example
+
+Among 900 randomly selected registered
+voters nationwide, 63% of them are somewhat or
+very concerned about the spread of bird flu in
+the United States. 
+
+* What is the point estimate for $p$, the proportion of U.S. voters who are concerned about the spread of bird flu?
+
+* Construct a 95\% CI for $p$
+
+
+```{r}
+n = 900; x = 900 * .63 
+# point estimate
+phat <- x / n
+phat
+# 95% CI for p
+wald.ci(x, n)
+```
+
+## Sample size calculation example
+
+A researcher wants to estimate the proportion of voters who will vote for candidate A. She wants to estimate to within 0.05 with 90% confidence.
+
+```{r}
+# True proportion is .9
+p = 0.9; alpha = 1 - 0.9
+n = p * (1 - p) * (qnorm(1 - alpha / 2) / 0.05)^2
+n
+# True proportion is .6
+p = 0.6
+n = p * (1 - p) * (qnorm(1 - alpha / 2) / 0.05)^2
+n
+# True proportion is .5
+p = 0.5
+n = p * (1 - p) * (qnorm(1 - alpha / 2) / 0.05)^2
+n
+# Just for fun
+p <- seq(0.01, 0.99, 0.01)
+n = p * (1 - p) * (qnorm(1 - alpha / 2) / 0.05)^2
+
+plot(p, n, type = "l",
+     xlab = "True proportion",
+     ylab = "Simple size",
+     las = 1)
+abline(v = 0.5, col = "gray")
+abline(h = max(n), col = "gray")
+grid()
+```
+
+## Hypothesis testing: Bird flu example
+
+Among 900 randomly selected registered
+voters nationwide, 63% of them are somewhat or
+very concerned about the spread of bird flu in the United States. Conduct a hypothesis test at .01 level to assess the research hypothesis: $p>.6$.
+
+
+```{r}
+n = 900; x = .63 * 900
+p_null = .6; alpha = 0.01 
+
+prop.test(x, n, p = p_null,
+          conf.level = 1 - alpha,
+          alternative = "greater",
+          correct = FALSE)
+# With Yates' continuity correction
+prop.test(x, n, p = p_null,
+          conf.level = 1 - alpha,
+          alternative = "greater",
+          correct = TRUE)
+```
+
+## Proportion of CU vegetarian
+
+```{r}
+n = 25; x = 0
+wald.ci(x, n)
+## Wilson score CI
+library(PropCIs)
+scoreci(x, n, conf.level = .95)
+## Check 
+prop.test(x, n, conf.level = 0.95,
+          correct = F)
+```
+
+Here the rule of three provides a quick and reasonable approximation
+
+## Inference for $p_{1}-p_{2}$
+
+A Simple Random Simple of 100 CU graduate students is taken and it is found that 79 strongly
+agree that they would recommend their current graduate program. A Simple Random Simple of 85
+USC graduate students is taken and it is found that 52 strongly agree that they
+would recommend their current graduate program. At 5 % level, can we conclude that the proportion of strongly agree is higher at CU?
+
+
+```{r}
+x <- c(79, 52); n <- c(100, 85)
+prop.test(x, n, alternative = "greater", correct = F)
+# With Yates' continuity correction
+prop.test(x, n, alternative = "greater", correct = F)
+```
+
+
+
