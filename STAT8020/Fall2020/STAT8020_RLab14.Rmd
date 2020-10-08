@@ -1,0 +1,180 @@
+---
+title: "STAT 8020 R Lab 14"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 8.5
+    fig_height: 6.5
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Hypothesis testing: Bird flu example
+
+Among 900 randomly selected registered
+voters nationwide, 63% of them are somewhat or
+very concerned about the spread of bird flu in the United States. Conduct a hypothesis test at .01 level to assess the research hypothesis: $p>.6$.
+
+
+```{r, message=FALSE}
+library(fastR)
+phat = 0.63
+n = 900; x = phat * 900; 
+p_null = .6; alpha = 0.01 
+# Test statistic
+zobs <- (phat - p_null) / sqrt(p_null * (1 - p_null) / n)
+# P-vale of the right-tailed test
+pnorm(zobs, lower.tail = F)
+# The Z-test here is in fact equlievent to chi-square test
+
+prop.test(x, n, p = p_null,
+          conf.level = 1 - alpha,
+          alternative = "greater",
+          correct = FALSE)
+# With Yates' continuity correction
+prop.test(x, n, p = p_null,
+          conf.level = 1 - alpha,
+          alternative = "greater",
+          correct = TRUE)
+```
+
+## Proportion of CU vegetarian
+
+```{r}
+n = 25; x = 0
+wald.ci(x, n)
+## Wilson score CI
+library(PropCIs)
+scoreci(x, n, conf.level = .95)
+## Check 
+prop.test(x, n, conf.level = 0.95,
+          correct = F)
+```
+
+Here the rule of three provides a quick and reasonable approximation
+
+## Inference for $p_{1}-p_{2}$
+
+A Simple Random Simple of 100 CU graduate students is taken and it is found that 79 strongly
+agree that they would recommend their current graduate program. A Simple Random Simple of 85
+USC graduate students is taken and it is found that 52 strongly agree that they
+would recommend their current graduate program. At 5 % level, can we conclude that the proportion of strongly agree is higher at CU?
+
+
+```{r}
+x <- c(79, 52); n <- c(100, 85)
+phat <- x / n
+pbar <- sum(x) / sum(n)
+# Test statistic
+zobs <- -diff(phat) / sqrt(pbar * (1 - pbar) / n[1] + pbar * (1 - pbar) / n[2]) 
+# P-value
+pnorm(zobs, lower.tail = F)
+
+prop.test(x, n, alternative = "greater", correct = F)
+# With Yates' continuity correction
+prop.test(x, n, alternative = "greater", correct = F)
+```
+
+## Example: Testing Mendel’s theories
+
+Among its many applications, Pearson's $\chi^2$ test was used in genetics to test Mendel's theories of natural inheritance. Mendel crossed pea plants of pure yellow strain (dominant strain) plants of pure green strain. He predicted that second generation hybrid seeds would be 75% yellow and 25% green. One experiment produced $n = 8023$ seeds, of which $X_{1} = 6022$ were yellow and $X_{2}=2001$ were green.
+
+* Use Pearson's $\chi^2$ test to assess Mendel's hypothesis.
+
+```{r}
+x1 = 6022; x2 = 2001; n = 8023; p1 = .75; p2 = .25
+# chi square test for p1 = .75
+prop.test(x1, n, p = p1, correct = F)
+# Chi square test for p1 = .25
+prop.test(x2, n, p = p2, correct = F)
+# Z test for p1 = .75
+## test statistic
+zobs <- (x1 / n - p1) / sqrt((p1 * p2) / n)
+zobs^2
+## P-value
+2 * (1 - pnorm(zobs))
+# Yates' continuity correction
+prop.test(x1, n, p = p1)
+```
+
+
+## Color preference example
+
+In Child Psychology, color preference by young children is used as an indicator of emotional state. In astudy of 112 children,  each was asked to choose favorite  color  from  the  7  colors  indicated  below. Test if there is evidence of a preference at the $\alpha = .05$ level.
+
+
+Color     | Blue | Red | Green | White | Purple | Black | Other
+----------|------|-----|-------|-------|--------|-------|------
+Frequency | 13   |  14 | 8     | 17    | 25     | 15    | 20
+
+
+```{r}
+x <- c(13, 14, 8, 17, 25, 15, 20)
+chisq.test(x, correct = F)
+
+#Check 
+ek <- (sum(x) * 1 / length(x))
+chisq <- sum((x - (sum(x) * 1 / length(x)))^2 / ek)
+chisq
+## P-value
+1 - pchisq(chisq, 6)
+```
+
+## Gender vs. Handness example
+
+```{r}
+x <- c(43, 9, 44, 4)
+data <- matrix(x, nrow = 2, ncol = 2,
+               byrow = TRUE)
+dimnames(data) = list(Gender = c("M", "F"), Right = c("R", "L"))
+data
+chisq.test(data, correct = F)
+
+#Check
+ek <- outer(rowSums(data), colSums(data)) / 100
+chisq <- sum((data - ek)^2 / ek)
+chisq
+```
+
+## Marital status example
+
+```{r}
+x <- c(581, 487, 455, 477)
+data <- matrix(x, nrow = 2, ncol = 2,
+               byrow = TRUE)
+dimnames(data) = list(Child = c("M", "D"), Parent = c("M", "D"))
+data
+chisq.test(data, correct = F)
+```
+
+
+## Purdue enrollment data example
+
+The following contingency table contains enrollment data for a random sample of students from severalcolleges at Purdue University during the 2006-2007 academic year. The table lists the number of male and female students enrolled in each college. Use the two-way table to conduct a $\chi^2$ test from beginning to end. Use $\alpha = .01$.
+
+
+```{r}
+table <- matrix(c(378, 99, 104, 262, 175, 510), 3, 2)
+colnames(table) <- c("Female", "Male")
+rownames(table) <- c("Liberal Art", "Science", "Engineering")
+table
+```
+
+```{r}
+chisq.test(table, correct = F)
+library(vcd)
+mosaic(table)
+```
+
+
+
