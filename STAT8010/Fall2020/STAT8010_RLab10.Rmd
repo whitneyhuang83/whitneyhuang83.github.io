@@ -1,0 +1,155 @@
+---
+title: "STAT 8010 R Lab 10"
+author: "Whitney Huang"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 8.5
+    fig_height: 6.5
+    fig_caption: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Type I and Type II Errors
+
+```{r}
+library(scales)
+curve(dnorm(x), from = -3.75, to = 6.75, n = 1001, lwd = 1.5, col = "gray",
+      xlab = "",
+      ylab = "", las = 1,
+      xaxt = "n", yaxt = "n")
+abline(v = 1.96, lty = 2, col = "blue")
+x_grid <- seq(-3.75, 6.75, 0.01)
+y_grid <- dnorm(x_grid)
+polygon(c(x_grid[x_grid > 1.96], rev(x_grid[x_grid > 1.96])),
+        c(y_grid[x_grid > 1.96], rep(0, length(y_grid[x_grid > 1.96]))), col = alpha("pink", 0.2))
+curve(dnorm(x, mean = 3), from = -3.75, to = 6.75, n = 1001, lwd = 1.5, add = T,
+      xlab = "",
+      ylab = "", las = 1)
+x_grid <- seq(-3.75, 6.75, 0.01)
+y_grid <- dnorm(x_grid, mean = 3)
+polygon(c(x_grid[x_grid < 1.96], rev(x_grid[x_grid < 1.96])),
+        c(y_grid[x_grid < 1.96], rep(0, length(y_grid[x_grid < 1.96]))), col = alpha("lightblue", 0.2))
+abline(v = 0, lty = 2, col = "gray")
+abline(v = 3, lty = 2)
+axis(1, at = 0, labels = expression(mu[0]))
+axis(1, at = 3, labels = expression(mu[a]))
+text(2.2, 0.02, expression(alpha), col = "red")
+text(1.6, 0.02, expression(beta), col = "blue")
+```
+
+
+## Power analysis
+
+
+```{r}
+library(asbio)
+power.z.test(sigma = 10, n = 25, power = NULL, alpha = 0.05,
+             effect = 4,  test = c("one.tail"))
+
+power.z.test(sigma = 10, n = NULL, power = 0.8, alpha = 0.05,
+             effect = 4,  test = c("one.tail"))
+
+power.t.test(n = 25, delta = 4, sd = 10, sig.level = 0.05,
+             power = NULL, type = "one.sample", alternative = "one.sided")
+
+power.t.test(n = NULL, delta = 4, sd = 10, sig.level = 0.05,
+             power = 0.8, type = "one.sample", alternative = "one.sided")
+```
+
+
+## Inference for two population means
+
+### Tapeworm example
+
+```{r}
+treatment <- c(18, 43, 28, 50, 16, 32, 13, 35, 38, 33, 6, 7)
+control <- c(40, 54, 26, 63, 21, 37, 39, 23, 48, 58, 28, 39)
+dat <- data.frame(cbind(treatment, control))
+summary(dat)
+
+boxplot(dat, boxwex = 0.3, las = 1)
+apply(dat, 2, mean)
+apply(dat, 2, sd)
+var.test(treatment, control)
+
+# Assuming $\sigma_{1}=\sigma_{2}$
+t.test(treatment, control, var.equal = T)
+# Assuming $\sigma_{1}\neq\sigma_{2}$
+t.test(treatment, control, var.equal = F)
+
+# Left-tailed test 
+t.test(treatment, control, alternative = "less")
+```
+
+### Two sample t test with only sample statistics 
+
+```{r}
+t.test.from.summary.data <- function(mean1, sd1, n1, mean2, sd2, n2, ...) {
+    data1 <- scale(1:n1)*sd1 + mean1
+    data2 <- scale(1:n2)*sd2 + mean2
+    t.test(data1, data2, ...)
+}
+
+t.test.from.summary.data(12.5, 7.63, 10, 27.5, 15.3, 10)
+
+## Check 
+df = ((4.3^2)/37 + (2.2^2)/31)^2 / (((4.3^2)/37)^2 / 36 +  ((2.2^2)/31)^2 / 30)
+
+se <- sqrt(4.3^2 / 37 + 2.2^2 / 31) 
+
+tstat <- (19.45 - 18.2) / se
+
+Pvalue <- 2 * (1 - pt(1.5435, df))
+```
+
+
+## Paired T-Test
+
+```{r}
+repair <- c(17.6, 17.3, 20.2, 19.1,
+            19.5, 18.4, 11.3, 11.5,
+            13.0, 12.7, 16.3, 15.8,
+            15.3, 14.9, 16.2, 15.3,
+            12.2, 12.0, 14.8, 14.2,
+            21.3, 21.0, 22.1, 21.0,
+            16.9, 16.1, 17.6, 16.7,
+            18.4, 17.5)
+GarageI <- repair[seq(1, 29, 2)]
+GarageII <- repair[seq(2, 30, 2)]
+dat <- cbind(GarageI, GarageII)
+apply(dat, 2, mean)
+
+library(scales)
+plot(GarageI, GarageII,
+     pch = 16, col = alpha("blue", 0.5), las = 1,
+     xlim = c(11, 23),
+     ylim = c(11, 23))
+abline(0, 1, col = "gray", lwd = 1.5)
+
+
+t.test(GarageI, GarageII, 
+       alternative = c("greater"),
+       var.equal = F)
+
+
+boxplot(GarageI, GarageII, boxwex = 0.4,
+        xaxt = "n", las = 1)
+axis(1, at = 1:2, labels = c("Garage I", "Garage II"))
+
+boxplot(GarageI - GarageII, boxwex = 0.4,
+        xaxt = "n", las = 1)
+axis(1, at = 1, labels = "Garage I - Garage II")
+abline(h = 0, col = "blue", lty = 2)
+
+t.test(GarageI, GarageII, alternative = c("greater"), paired = T)
+```
+
+
+
+
