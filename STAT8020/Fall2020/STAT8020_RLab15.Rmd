@@ -1,0 +1,106 @@
+---
+title: "STAT 8020 R Lab 15: Logistic Regression"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Odds Ratio
+
+### Heart Attack Example
+
+```{r}
+n11 = 189; n12 = 10845; n21 = 104; n22 = 10933
+## odds ratio
+theta <- (n11 * n22) / (n12 * n21)
+SE_log.theta <- sqrt(1 / n11 + 1 / n12 + 1 / n21 + 1 / n22) 
+z <- qnorm(0.975)
+CI_log.theta <- c(log(theta) - z * SE_log.theta, log(theta) + z * SE_log.theta)
+exp(CI_log.theta)
+```
+
+### Gender vs. Handness Example
+
+```{r}
+n11 = 9; n12 = 43; n21 = 4; n22 = 44
+theta <- (n11 * n22) / (n12 * n21)
+SE_log.theta <- sqrt(1 / n11 + 1 / n12 + 1 / n21 + 1 / n22) 
+z <- qnorm(0.975)
+CI_log.theta <- c(log(theta) - z * SE_log.theta, log(theta) + z * SE_log.theta)
+exp(CI_log.theta)
+```
+
+## Logistic Regression
+
+```{r}
+crab <- read.table("http://users.stat.ufl.edu/~aa/cda/data/Crabs.dat", header = T)
+# Linear Regression
+lmFit <- lm(crab$y ~ crab$weight)
+par(mar = c(3.5, 3.5, 0.8, 0.6))
+plot(crab$weight, crab$y, pch = 16, cex = 0.75, las = 1, xlab = "",
+     ylab = "")
+mtext("Weight (kg)", side = 1, line = 2)
+abline(lmFit, col = "red")
+
+# Logistic Regression
+logitFit <- glm(y ~ weight, data = crab, family = "binomial")
+summary(logitFit)
+# Plot the fits
+rg <- range(crab$weight)
+xg <- seq(rg[1], rg[2], 0.01)
+pred <- predict(logitFit, newdata = data.frame(weight = xg), type = "response")
+par(mar = c(3.5, 3.5, 0.8, 0.6))
+plot(crab$weight, crab$y, pch = 16, cex = 0.75, las = 1, xlab = "",
+     ylab = "")
+mtext("Weight (kg)", side = 1, line = 2)
+abline(lmFit, col = "red")
+lines(xg, pred, col = "blue")
+legend("bottomright", legend = c("SLR", "Logistic"),
+       col = c("red", "blue"), lty = 1, bty = "n")
+
+# Another CI
+library(MASS)
+confint(logitFit)
+
+# Residual plot
+par(mfrow = c(1, 2))
+plot(logitFit, which = 1:2)
+```
+
+
+## Diagnostic
+
+```{r}
+wt_bin <- findInterval(crab$weight, unique(quantile(crab$weight, seq(0, 1, length.out = 20 + 1))), rightmost.closed = TRUE)
+library(dplyr)
+crab.res <- mutate(crab, residuals = residuals(logitFit), Linpred = predict(logitFit), bin = wt_bin)
+
+res_bin <- tapply(crab.res$residuals, crab.res$bin, mean)
+Lpred_bin <- tapply(crab.res$Linpred, crab.res$bin, mean)
+
+plot(res_bin ~ Lpred_bin, xlab = "Linear predictor",
+     ylab = "Binned residuals")
+```
+
+## Model selection
+
+```{r}
+logitFit2 <- glm(y ~ weight + width, data = crab, family = "binomial")
+step(logitFit2)
+```
+
+
+
+
+
