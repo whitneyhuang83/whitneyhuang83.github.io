@@ -1,0 +1,168 @@
+---
+title: "STAT 8020 R Lab 16: Poisson Regression"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Poisson Distribution
+
+```{r}
+x1 <- 0:5; x2 <- 0:10; x3 <- 0:15
+par(mfrow = c(1, 3))
+plot(x1, dpois(x1, 0.5), type = "h", lwd = 4, col = "gray", las = 1,
+     xlab = "", ylab = "probability")
+mtext("y", side = 1, line = 2)
+mtext("(a)")
+legend("top", legend = expression(paste(lambda,  "= 0.5")), bty = "n")
+plot(x2, dpois(x2, 2), type = "h", lwd = 4, col = "gray", las = 1,
+     xlab = "", ylab = "probability")
+mtext("y", side = 1, line = 2)
+mtext("(b)")
+legend("top", legend = expression(paste(lambda,  "= 2")), bty = "n")
+plot(x3, dpois(x3, 5), type = "h", lwd = 4, col = "gray", las = 1,
+     xlab = "", ylab = "probability")
+mtext("y", side = 1, line = 2)
+mtext("(c)")
+legend("top", legend = expression(paste(lambda,  "= 5")), bty = "n")
+```
+
+## Flying-Bomb Hits on London During World War II [Clarke, 1946; Feller, 1950]
+
+```{r}
+count <- c(229, 211, 93, 35, 7, 1)
+grids <- 576
+hits <- 537
+lambda <- hits / grids
+count_expected <- c(grids * dpois(0:4, lambda = lambda), grids * ppois(4, lambda = lambda, lower.tail = F))
+round(count_expected, 1)
+```
+
+## US Landfalling Hurriances 
+
+### Load the hurriance count 
+
+```{r}
+con = "http://myweb.fsu.edu/jelsner/Book/Chap07/US.txt"
+hurricanes = read.table(con, header = T)
+head(hurricanes)
+
+par(las = 1, mar = c(4.6, 3.9, 0.8, 0.6))
+layout(matrix(c(1, 2), 1, 2, byrow = TRUE), widths = c(0.57, 0.43))
+plot(hurricanes$Year, hurricanes$All, type = "h", xlab = "Year", ylab = "Hurricane count")
+grid()
+barplot(table(hurricanes$All), xlab = "Hurricane Count", ylab = "Number of years", main = "")
+```
+
+### Load the environmetal variables
+
+```{r}
+load("annual.RData")
+data <- data.frame(All = hurricanes$All, SOI = annual$soi, NAO = annual$nao,
+                 SST = annual$sst, SSN = annual$ssn)
+data <- data[-(1:15),]
+
+H <- hurricanes
+
+par(mfrow = c(2, 2), mar = c(4.5, 4, 1, 0.6))
+plot(range(annual$sst, na.rm = TRUE), c(0, 7), type = "n", ylab = "Hurricane count", xlab = "SST",
+     las = 1)
+for(i in 0:7){
+  points(fivenum(annual$sst[H$All == i])[3], i, pch = 19)
+  lines(c(fivenum(annual$sst[H$All == i])[1], fivenum(annual$sst[H$All == i])[2]), c(i, i))
+  lines(c(fivenum(annual$sst[H$All == i])[4], fivenum(annual$sst[H$All == i])[5]), c(i, i))
+}
+plot(range(annual$soi, na.rm = TRUE), c(0, 7), type = "n", ylab = "Hurricane count", xlab = "SOI",
+     las = 1)
+
+for(i in 0:7){
+  points(fivenum(annual$soi[H$All == i])[3], i, pch=19)
+  lines(c(fivenum(annual$soi[H$All == i])[1], fivenum(annual$soi[H$All == i])[2]), c(i, i))
+  lines(c(fivenum(annual$soi[H$All == i])[4], fivenum(annual$soi[H$All == i])[5]), c(i, i))
+}
+plot(range(annual$nao, na.rm = TRUE), c(0, 7), type = "n", ylab = "Hurricane count", xlab = "NAO",
+     las = 1)
+
+for(i in 0:7){
+  points(fivenum(annual$nao[H$All == i])[3], i, pch=19)
+  lines(c(fivenum(annual$nao[H$All == i])[1], fivenum(annual$nao[H$All == i])[2]), c(i, i))
+  lines(c(fivenum(annual$nao[H$All == i])[4], fivenum(annual$nao[H$All == i])[5]), c(i, i))
+}
+plot(range(annual$ssn, na.rm = TRUE), c(0, 7), type = "n", ylab = "Hurricane count",
+     xlab = "Sunspot number", las = 1)
+
+for(i in 0:7){
+  points(fivenum(annual$ssn[H$All == i])[3], i, pch = 19)
+  lines(c(fivenum(annual$ssn[H$All == i])[1], fivenum(annual$ssn[H$All == i])[2]), c(i, i))
+  lines(c(fivenum(annual$ssn[H$All == i])[4], fivenum(annual$ssn[H$All == i])[5]), c(i, i))
+}
+```
+
+### Monte Carlo Simulation
+
+```{r}
+rate = mean(H$All)
+var(H$All)/rate
+n <- length(H$All)
+
+set.seed(1234)
+ratio = numeric()
+m = 5000
+for (i in 1:m) {
+    h = rpois(n = n, lambda = rate)
+    ratio[i] = var(h) / mean(h)
+}
+
+hist(ratio, 50, las = 1, col = "lightblue", border = "gray")
+abline(v = var(H$All)/rate)
+
+sum(ratio > var(H$All)/rate) / m
+```
+
+### Linear Regression 
+
+```{r}
+lmFull <- lm(All ~ ., data = data)
+predict(lmFull, newdata = data.frame(SOI = -3, NAO = 3, SST = 0, SSN = 250))
+step(lmFull)
+```
+
+### Poisson Regression
+
+```{r}
+PoiFull <- glm(All ~ ., data = data, family = "poisson")
+summary(PoiFull)
+
+plot(data$SOI, hurricanes$All[-(1:15)], pch = 16, cex = 0.75, col = "lightblue",
+     xlab = "", ylab = "", las = 1)
+mtext("Hurricane Count", side = 2, line = 2)
+mtext("Year", side = 1, line = 2)
+points(data$SOI, predict(lmFull), col = "red")
+points(data$SOI, predict(PoiFull, type = "response"), col = "blue")
+```
+
+## Another Example
+
+```{r}
+library(faraway)
+data(gala)
+gala <- gala[, -2]
+PoiFit <- glm(Species ~ ., family = poisson, gala)
+summary(PoiFit)
+step(PoiFit)
+```
+
+
+
+
