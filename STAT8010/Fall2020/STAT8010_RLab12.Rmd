@@ -1,0 +1,50 @@
+---
+title: "STAT 8010 R Lab 12"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 8.5
+    fig_height: 7
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Create the data set
+
+```{r}
+x <- c(52, 47, 44, 51, 42, 60, 55, 49, 52, 43, 56, 48, 45, 44, 38)
+trt <- rep(c("A", "B", "C"), each = 5)
+blk <- rep(1:5, 3)
+dat <- data.frame(x = x, trt = trt, blk = as.factor(blk))
+```
+
+## Two-way ANOVA
+
+```{r}
+aov <- aov(x ~ trt + blk, data = dat)
+lm <- lm(x ~ trt + blk, data = dat)
+anova(lm)
+```
+
+## One-way ANOVA
+
+```{r}
+lm2 <- lm(x ~ trt, data = dat)
+anova(lm2)
+```
+
+## Interaction plot: assessing the additivity assumption
+
+```{r}
+interaction.plot(dat$trt, dat$blk,
+                 x, las = 1,
+                 col = 1:5)
+```
