@@ -1,0 +1,175 @@
+---
+title: "STAT 8010 R Lab 11"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 8.5
+    fig_height: 7
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## AONVA Toy Examples
+
+```{r, message=FALSE}
+set.seed(1)
+base1 <- rnorm(n = 36, sd = 2)
+base2 <- rnorm(n = 36, sd = 6)
+dat1 <- base1 + c(rep(5, 12), rep(10, 12), rep(15, 12))
+dat2 <- base2 + c(rep(5, 12), rep(10, 12), rep(15, 12))
+dat3 <- base1 + rep(5:7, each = 12)
+level <- as.factor(rep(1:3, each = 12))
+dat1 <- data.frame(x = dat1, Group = level)
+dat2 <- data.frame(x = dat2, Group = level)
+dat3 <- data.frame(x = dat3, Group = level)
+library(dplyr)
+g1summary <- dat1 %>%
+select(x, Group) %>%
+group_by(Group) %>%
+summarise(mean = mean(x), sd1 = sd(x))
+
+g2summary <- dat2 %>%
+select(x, Group) %>%
+group_by(Group) %>%
+summarise(mean = mean(x), sd1 = sd(x))
+
+g3summary <- dat3 %>%
+select(x, Group) %>%
+group_by(Group) %>%
+summarise(mean = mean(x), sd1 = sd(x))
+
+
+par(mfrow = c(1, 2), mar = c(4.1, 2.1, 2.1, 1.1))
+boxplot(x ~ Group, data = dat1, las = 1, boxwex = 0.5,
+        ylab = "", ylim = c(0, 30), main = "Case 1")
+for (i in 1:3) points(i, g1summary$mean[i], pch = "*",
+                      col = "blue", cex = 2)
+boxplot(x ~ Group, data = dat2, las = 1, boxwex = 0.5,
+        ylab = "", ylim = c(0, 30), main = "Case 2")
+for (i in 1:3) points(i, g2summary$mean[i], pch = "*",
+                      col = "blue", cex = 2)
+
+par(mfrow = c(1, 2), mar = c(4.1, 2.1, 2.1, 1.1))
+boxplot(x ~ Group, data = dat1, las = 1, boxwex = 0.5,
+        ylab = "", ylim = c(1.5, 18), main = "Case 1")
+for (i in 1:3) points(i, g1summary$mean[i], pch = "*",
+                      col = "blue", cex = 2)
+boxplot(x ~ Group, data = dat3, las = 1, boxwex = 0.5,
+        ylab = "", ylim = c(1.5, 18), main = "Case 2")
+for (i in 1:3) points(i, g3summary$mean[i], pch = "*",
+                      col = "blue", cex = 2)
+
+model1 <- lm(x ~ Group, data = dat1)
+model2 <- lm(x ~ Group, data = dat2)
+anova(model1)
+anova(model2)
+```
+
+
+## F Distribution
+
+```{r}
+par(mar = c(4.1, 2.6, 1.1, 1.1))
+curve(df(x, 3, 16), from = 0, to = 10, n = 1001, las = 1,
+      xlab = "", ylab = "")
+abline(v = 3.5, col = "blue")
+abline(v = qf(0.95, 3, 16), lty = 2, lwd = 1.5)
+xg <- seq(3.5, 10, 0.01)
+yg <- df(xg, 3, 16)
+polygon(c(xg[xg >= 3.5], rev(c(xg[xg >= 3.5]))), c(yg[xg >= 3.5], rep(0, length(yg[xg >= 3.5]))),
+        col = "lightblue")
+axis(1, at = 3.5, labels = expression(F["obs"]), col = "blue", col.axis = "blue")
+axis(1, at = qf(0.95, 3, 16), line = -0.85, labels = expression(F[paste(0.95, ", df1", ", df2")]))
+arrows(qf(0.95, 3, 16), 0.5, 10)
+text(6, 0.55, "Rejection Region at 5% level")
+```
+
+##  Effects of Ethanol on Sleep Time Example
+
+### Data setup
+
+```{r}
+set.seed(124)
+g1 <- rnorm(5, 83, 9); g2 <- rnorm(5, 76, 9.5); g3 <- rnorm(5, 73, 9.2); g4 <- rnorm(5, 70, 9)
+dat <- cbind(Response = c(g1, g2, g3, g4), Treatment = as.factor(rep(1:4, each = 5)))
+dat <- data.frame(dat)
+dat$Treatment <- as.factor(dat$Treatment)
+par(mar = c(4.1, 4.1, 1.1, 1.1))
+boxplot(Response ~ Treatment, data = dat, horizontal = T, yaxt = "n", ylab = "", xlab = "")
+axis(2, at = 1:4, labels = c("Control", "1g/kg", "2g/kg", "4g/kg"), las = 1)
+```
+
+### Data Summary
+
+```{r}
+summary <- dat %>%
+select(Response, Treatment) %>%
+group_by(Treatment) %>%
+summarise(mean = mean(Response),
+          sd1 = sd(Response))
+lm <- lm(Response ~ Treatment, dat)
+anova(lm)
+```
+
+### Pairwise t-test
+
+```{r}
+t.test(dat$Response[1:5], dat$Response[6:10], var.equal = T)
+t.test(dat$Response[1:5], dat$Response[6:10], var.equal = F)
+```
+
+## Facebook Example
+
+```{r, message=FALSE}
+dat <- read.csv("FacebookFriends.csv")
+head(dat); str(dat)
+dat$Friends <- as.factor(dat$Friends)
+str(dat)
+
+boxplot(Score ~ Friends, data = dat, las = 1, col = "gray", boxwex = 0.5)
+library(dplyr)
+summary <- dat %>%
+select(Score, Friends) %>%
+group_by(Friends) %>%
+summarise(mean = mean(Score),
+          sd1 = sd(Score))
+summary
+lm <- lm(Score ~ Friends, dat)
+anova(lm)
+plot(lm)
+
+aov <- aov(Score ~ Friends, dat)
+aov
+```
+
+### Fisher's LSD
+
+```{r}
+library(agricolae)
+LSD_none <- LSD.test(aov ,"Friends", p.adj = "none")
+LSD_none$groups
+LSD_bon <- LSD.test(aov ,"Friends", p.adj = "bonferroni")
+LSD_bon$groups
+```
+
+### Tukey's HSD
+
+```{r}
+HSD <- TukeyHSD(aov, conf.level = 0.95)
+HSD$Friends
+```
+
+
+
+
+
+
+
