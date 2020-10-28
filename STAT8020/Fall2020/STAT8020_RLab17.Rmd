@@ -1,0 +1,77 @@
+---
+title: "STAT 8020 R Lab 17: Poisson Regression II"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Species Diversity on the Galapagos Islands
+
+```{r}
+library(faraway)
+data(gala)
+gala <- gala[, -2] # remove "Endemics"
+gala
+
+lmFit <- lm(Species ~ ., gala)
+summary(lmFit)
+PoiFit <- glm(Species ~ ., family = poisson, gala)
+summary(PoiFit)
+step(PoiFit)
+```
+
+## Wafer Quality
+
+```{r}
+Freq <- c(320,14,80,36)
+Particle <- gl(2, 1, 4, labels = c("No", "Yes"))
+Quality <- gl(2, 2, labels = c("Good", "Bad"))
+(wafer <- data.frame(Freq, Particle, Quality))
+
+xtabs(Freq ~ Quality + Particle)
+```
+
+### Poisson Model
+
+```{r}
+mod1 <- glm(Freq ~ Quality + Particle, family = poisson)
+sumary(mod1)
+drop1(mod1, test = "Chi")
+```
+
+### Multinomial Model
+
+```{r}
+n = 450
+(pp <- prop.table(xtabs(Freq ~ Particle)))
+(qp <- prop.table(xtabs(Freq ~ Quality)))
+(exp <- outer(qp, pp) * n)
+(obs <- xtabs(Freq ~ Quality + Particle))
+(2 * sum(obs * log(obs / exp)))
+```
+
+### Binomial Model
+
+```{r}
+(m <- matrix(Freq, nrow = 2))
+(binFit <- glm(m ~ 1, family = binomial))
+predict(binFit, type = "response")
+```
+
+#### Hypergeometric Model 
+```{r}
+fisher.test(obs)
+```
+
+
