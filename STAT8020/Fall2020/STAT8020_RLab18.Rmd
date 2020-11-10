@@ -1,0 +1,153 @@
+---
+title: "STAT 8020 R Lab 18: Completely Randomized Designs"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## CRD
+
+### Create the data set
+
+```{r}
+r1 <- c(11.8, 10.8, 10.4, 11.5, 11.2) - 2 
+r2 <- c(9.2, 7.9, 8.5, 8.1, 7.5) - 1
+r3 <- c(5.8, 5.6, 4.9, 6.3, 6.2) + 1
+r4 <- c(2.8, 3.2, 3.4, 3.9, 2.6) + 2
+times <- c(r1, r2, r3, r4)
+trt <- rep(1:4, each = 5)
+dat <- data.frame(y = times, trt = as.factor(trt))
+boxplot(y ~ trt, data = dat, las = 1)
+```
+
+### Summary statistics by treatments
+
+```{r}
+(means <- tapply(dat$y, dat$trt, mean))
+(vars <- tapply(dat$y, dat$trt, var))
+```
+
+### Plot the data
+
+```{r}
+boxplot(y ~ trt, data = dat, las = 1)
+```
+
+### ANOVA table
+
+```{r}
+AOV <- aov(y ~ trt, data = dat)
+summary(AOV)
+```
+
+## Model Assumptions
+
+### Read the data into R
+
+```{r}
+balloon <- read.csv("cr_assumptions.csv", header = T)
+head(balloon)
+summary(balloon)
+summary(balloon)
+```
+
+### Convert variable COLOR to a factor
+
+```{r}
+attach(balloon)
+colorf <- as.factor(COLOR)
+colorf
+```
+
+### Model Fitting and Residuals
+
+```{r}
+mod1 <- lm(TIME ~ colorf)
+summary(mod1)
+anova(mod1)
+
+# Residuals
+r <- residuals(mod1)
+s <- rstandard(mod1)
+var(s)
+t <- rstudent(mod1)
+```
+
+### Assess Equal Variance
+
+```{r}
+# Levene’s test for equal variance
+library(lawstat)
+levene.test(TIME, colorf, location = "mean")
+# Brown-Forsythe test
+levene.test(TIME, colorf, location = "median")
+```
+
+### Plot $r_{ij}$ versus $\hat{y}_{i.}$ and treatments
+
+```{r}
+plot(mod1$fitted, mod1$resid, las = 1, xlab = "Fitted value", ylab = "Residual", cex = 0.75, col = "blue")
+abline(h = 0)
+plot(mod1$resid ~ colorf, ylab = "Residual", las = 1)
+```
+
+### Assess Normality
+
+```{r}
+par(mfrow = c(1, 2), las = 1)
+hist(mod1$resid, 8, main = "", xlab = "Residual", col = "lightblue")
+qqnorm(mod1$resid, cex = 0.8)
+qqline(mod1$resid, col = "red", lwd = 1.5)
+```
+
+```{r}
+new <- data.frame(colorf, mod1$resid)
+trt <- paste("Treatment", 1:4)
+for (i in 1:4){
+  newc1 <- new[colorf == i,]
+  qqnorm(newc1$mod1.resid, las = 1,
+         main = trt[i])
+  qqline(newc1$mod1.resid,
+         col = "red", lwd = 1.5)
+}
+```
+
+### Assess Indepdence
+
+```{r}
+plot(ORDER, mod1$residuals, col = "blue", las = 1, cex = 0.75, pch = 16, ylab = "Residual")
+abline(h = 0, lty = 2, lwd = 1.5)
+# By treatment
+colors <- c("pink", "yellow",
+"orange", "blue")
+
+plot(ORDER, mod1$residuals, col = colors[colorf], las = 1, cex = 0.75,
+     pch = 16, ylab = "Residual")
+abline(h = 0, lty = 2, lwd = 1.5)
+```
+
+```{r, message=FALSE}
+# Durbin-Watson test
+library(lmtest)
+dwtest(TIME ~ colorf)
+```
+
+### Fit a model with correlated AR(1) error
+
+```{r}
+library(nlme)
+mod2 <- gls(TIME ~ colorf, correlation = corARMA(p = 1, q = 0))
+mod2
+```
+
