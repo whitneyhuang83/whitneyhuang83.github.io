@@ -1,0 +1,93 @@
+---
+title: "STAT 8020 R Lab 19"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 8.5
+    fig_height: 7
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## RCBD 
+
+### Create the data set
+
+```{r}
+x <- c(52, 47, 44, 51, 42, 60, 55, 49, 52, 43, 56, 48, 45, 44, 38)
+trt <- rep(c("A", "B", "C"), each = 5)
+blk <- rep(1:5, 3)
+dat <- data.frame(x = x, trt = trt, blk = as.factor(blk))
+```
+
+### Two-way ANOVA
+
+```{r}
+aov <- aov(x ~ trt + blk, data = dat)
+lm <- lm(x ~ trt + blk, data = dat)
+anova(lm)
+```
+
+### One-way ANOVA
+
+```{r}
+lm2 <- lm(x ~ trt, data = dat)
+anova(lm2)
+```
+
+### Interaction plot: assessing the additivity assumption
+
+```{r}
+interaction.plot(dat$trt, dat$blk, x, las = 1, col = 1:5)
+```
+
+## Factorial Design
+
+### Create the data set
+
+```{r}
+y <- c(130, 74, 150, 159, 138, 168, 155, 180, 188, 126, 110, 160,
+       34, 80, 136, 106, 174, 150, 40, 75, 122, 115, 120, 139,
+       20, 82, 25, 58, 96, 82, 70, 58, 70, 45, 104, 60)
+temp <- c(rep(15, 12), rep(70, 12), rep(125, 12))
+material <- rep(c(1, 1, 2, 2, 3, 3), 6)
+dat <- data.frame(cbind(y, temp, material))
+dat$temp <- as.factor(dat$temp); dat$material <- as.factor(dat$material)
+
+meanA <- tapply(dat$y, dat$temp, mean)
+meanB <- tapply(dat$y, dat$material, mean)
+meanAB <- tapply(dat$y, list(dat$temp, dat$material), mean)
+```
+
+### Two-way ANOVA
+
+```{r}
+aov <- aov(y ~ temp * material, data = dat)
+lm <- lm(y ~ temp * material, data = dat)
+anova(lm)
+```
+
+### Interaction plot
+
+```{r}
+interaction.plot(dat$temp, dat$material, dat$y, las = 1)
+
+
+par(mar = c(4.1, 4, 1, 0.8))
+plot(rep(c(15, 70, 125), 3), c(meanAB), pch = 16, las = 1,
+     xlab = "Temperature (degree F)", ylab = "Average life (hrs)")
+lines(c(15, 70, 125), meanAB[, 1])
+lines(c(15, 70, 125), meanAB[, 2], lty = 5)
+lines(c(15, 70, 125), meanAB[, 3], lty = 3)
+legend("topright", legend = paste("Material", 1:3), bty = "n",
+lty = c(1, 5, 3)) 
+```
+
