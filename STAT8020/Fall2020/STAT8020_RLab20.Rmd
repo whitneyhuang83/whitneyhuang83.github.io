@@ -1,0 +1,151 @@
+---
+title: "STAT 8020 R Lab 20"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 8.5
+    fig_height: 7
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Computer Experiments
+
+### Design: Latin hypercube
+
+```{r}
+# install.packages("lhs") # Latin Hypercube Sample Package
+library(lhs)
+# Generate a good n x k LHD
+LHD = maximinLHS(n = 30, k = 3, dup = 5)
+# "dup" is an integer tuning parameter that determines the number of 
+# candidate points considered. Larger values should inprove results 
+# but require more computational resources.
+
+# Display the LHD
+LHD
+pairs(LHD)
+```
+
+### Analysis: Gaussian Process
+
+```{r}
+# Load the data
+neuron <- read.table("http://deanvossdraguljic.ietsandbox.net/DeanVossDraguljic/R-data/neuron.txt", header = T)
+head(neuron, 10)
+# Fit a GP
+library(mlegp)
+GPFit <- mlegp(neuron[, 1:2], neuron[, 3])
+summary(GPFit)
+# Make prediction
+predictedX = expand.grid(g_NaF = seq(0, 1, 0.02), g_KDR = seq(0, 1, 0.02))
+yhats = predict(GPFit, predictedX, se.fit = T)
+# Visualize predictions and their uncertainty 
+library(fields)
+par(mfrow = c(1, 2))
+image.plot(seq(0, 1, 0.02), seq(0, 1, 0.02), matrix(yhats$fit, 51, 51),
+           xlab = "g NaF (mS/cm^2)", ylab = "g KDR (mS/cm^2)", las = 1,
+           main = "Predictions")
+points(neuron[, 1:2], pch = 16, cex = 0.75)
+image.plot(seq(0, 1, 0.02), seq(0, 1, 0.02), matrix(yhats$se.fit, 51, 51),
+           xlab = "g NaF (mS/cm^2)", ylab = "g KDR (mS/cm^2)", las = 1,
+           main = "Predictions Uncertinaty")
+points(neuron[, 1:2], pch = 16, cex = 0.75)
+```
+
+## PCA: SST Example
+
+### Load and visualize the data
+
+```{r}
+load("SST1.rda")
+library(fields)
+par(las = 1, mar = c(3, 3, 1, 1))
+image.plot(lon1, lat1, SST1[,, 1],
+           xaxt = "n", xlab = "", ylab = "")
+lon <- ifelse(lon1 <= 180, lon1, lon1 - 360)
+axis(1, at = lon1[seq(4, 84, 10)], lon[seq(4, 84, 10)])
+map("world2", add = TRUE, lwd = 2)
+```
+
+### Compute the SST anomalies
+
+```{r}
+t <- array(SST1, dim = c(84, 30, 12, 46))
+SST_temp <- apply(t, 1:3, function(x) x - mean(x, na.rm = T))
+
+SST_anomalies <- array(dim = c(84, 30, 552))
+for (i in 1:84){
+  for (j in 1:30){
+    SST_anomalies[i, j,] <- c(t(SST_temp[, i, j,]))
+  }
+}
+```
+
+### Create the screenplot
+
+```{r}
+temp <- array(SST, c(84 * 30, 552))
+ind <- is.na(temp[, 1])
+temp <- temp[!ind,]
+temp2 <- svd(temp)
+U1 <- matrix(NA, 84 * 30)
+U1[!ind] <- temp2$u[, 1]
+U1 <- matrix(U1, 84, 30)
+
+par(mar = c(4, 4, 1, 1), mfrow = c(1, 2), las = 1)
+dt <- ((temp2$d^2) / sum(temp2$d^2))
+plot(1:50, dt[1:50], xlab = "Index", ylab = "Relative Variance",
+     pch = 16, cex = 0.8)
+grid()
+dt <- (cumsum(temp2$d^2)/sum(temp2$d^2))
+plot(1:50, dt[1:50], xlab = "Index", ylab = "Variance Explained",
+     pch = 16, cex = 0.8)
+yline(0.5, col = "red", lwd = 2)
+grid()
+```
+
+### EOFs
+
+```{r}
+temp <- array(SST, c(84 * 30, 552))
+ind <- is.na(temp[, 1])
+temp <- temp[!ind, ]
+temp2 <- svd(temp)
+U1 <- matrix(NA, 84 * 30)
+U1[!ind] <- temp2$u[, 1]
+U1 <- matrix(U1, 84, 30)
+U2 <- matrix(NA, 84 * 30)
+U2[!ind] <- temp2$u[, 2]
+U2 <- matrix(U2, 84, 30)
+U3 <- matrix(NA, 84 * 30)
+U3[!ind] <- temp2$u[, 3]
+U3 <- matrix(U3, 84, 30)
+zr <- range(c(U1, U2, U3), na.rm = TRUE)
+
+set.panel(3, 1)
+par(oma = c(0, 0, 0, 0))
+ct <- tim.colors(256)
+par(mar = c(1, 1, 1, 1))
+image(lon1, lat1, U1, axes = FALSE, xlab = "", ylab = "", zlim = zr, col = ct)
+map("world2", add = TRUE, lwd = 2)
+box()
+image(lon1, lat1, U2, axes = FALSE, xlab = "", ylab = "", zlim = zr, col = ct)
+map("world2", add = TRUE, lwd = 2)
+box()
+image(lon1, lat1, U3, axes = FALSE, xlab = "", ylab = "", zlim = zr, col = ct)
+map("world2", add = TRUE, lwd = 2)
+box()
+set.panel()
+par(oma = c(0, 0, 0, 0))
+image.plot(legend.only = TRUE, zlim = zr, col = ct, legend.shrink = 0.4)
+```
+
