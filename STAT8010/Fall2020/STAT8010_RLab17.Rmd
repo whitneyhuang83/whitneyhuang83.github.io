@@ -1,0 +1,127 @@
+---
+title: "STAT 8010 R Lab 17: Simple Linear Regression III"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 8.5
+    fig_height: 6.5
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Understanding Sampling Distributions and Confident Intervals via simulation
+
+Simulate the "data" $\{x_{i}, y_{i}\}_{i=1}^{n}$ where $y_{i} = \beta_{0}+\beta_{1}x_{i} + \varepsilon_{i}$, $\varepsilon \sim \mathrm{N}(0, \sigma^2)$. Repeat this process $N$ times.
+
+### Generate data in R
+
+```{r}
+set.seed(12)
+n = 30; beta0 = 3; beta1 = 1.5; N = 100; sigma2 = 1 
+x <- 3 + 5 * runif(n)
+set.seed(123)
+y <- replicate(N, beta0 + beta1 * x + rnorm(n, mean = 0, sd = sqrt(sigma2)))
+dim(y)
+```
+
+### Plot the first few simulated datasets
+
+```{r}
+for (i in 1:5){
+  plot(x, y[, i], pch = 16, las = 1, ylab = "y")
+  abline(3, 1.5, col = "blue", lwd = 1.5)
+}
+```
+
+### Estimate the $\beta_{0}$, $\beta_{1}$, and $\sigma^2$ for each simulated dataset 
+
+```{r}
+beta0_hat <- beta1_hat <- sigma2_hat <- se_beta1 <- numeric(N)
+for (i in 1:100){
+  fit <- lm(lm(y[, i] ~ x))
+  beta0_hat[i] <- summary(fit)[["coefficients"]][, 1][1]
+  beta1_hat[i] <- summary(fit)[["coefficients"]][, 1][2]
+  se_beta1[i] <- summary(fit)[["coefficients"]][, 2][2]
+  sigma2_hat[i] <- summary(fit)[["sigma"]]^2
+}
+```
+
+### Assess the estimation perfromance 
+
+```{r}
+boxplot(beta0_hat, las = 1, main = expression(hat(beta[0])))
+abline(h = beta0, col = "blue", lwd = 1.5)
+
+boxplot(beta1_hat, las = 1, main = expression(hat(beta[1])))
+abline(h = beta1, col = "blue", lwd = 1.5)
+
+boxplot(sigma2_hat, las = 1, main = expression(paste("Boxplot of ", hat(sigma)^2)))
+abline(h = sigma2, col = "blue", lwd = 1.5)
+```
+
+### Sampling distribution
+
+```{r}
+hist(beta1_hat, 16, col = "lightblue", border = "gray",
+     main = expression(paste("Histogram of ", hat(beta)[1])),
+     xlab = expression(hat(beta)[1]))
+abline(v = beta1, col = "blue", lwd = 1.5)
+mtext(expression(beta[1]), 1, at = beta1, col = "blue")
+```
+
+### CI's for all the simulated datasets
+
+```{r}
+t <- qt(1 - 0.05 / 2, n - 2)
+LL <- beta1_hat - t * se_beta1
+UL <- beta1_hat + t * se_beta1
+miss <- which((LL - beta1) * (UL - beta1) > 0)
+
+
+par(las = 1)
+plot(1:100, rep(beta1, N), type = "l", bty = "n", xaxt = "n", xlab = "",
+     lwd = 1.5, ylab = expression(hat(beta)[1]))
+for (i in 1:100){
+  segments(i, LL[i], i, UL[i], col = "blue")
+}
+
+for (i in miss){
+  segments(i, LL[i], i, UL[i], col = "red")
+}
+```
+
+
+## ANOVA
+
+### First Step: Load the data
+
+```{r}
+dat <- read.csv('http://whitneyhuang83.github.io/STAT8010/Data/maxHeartRate.csv', header = T) 
+head(dat)
+attach(dat)
+```
+
+### Fitting a simple linear regression
+
+```{r}
+fit <- lm(MaxHeartRate ~ Age)
+summary(fit)
+R.sq <- summary(fit)[["r.squared"]]
+r <- cor(dat$Age, dat$MaxHeartRate)
+r^2; R.sq
+```
+
+### ANOVA
+
+```{r}
+anova(fit)
+```
+
