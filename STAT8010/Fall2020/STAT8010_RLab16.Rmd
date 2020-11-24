@@ -1,5 +1,5 @@
 ---
-title: "STAT 8020 R Lab 2: Simple Linear Regression II"
+title: "STAT 8010 R Lab 16: Simple Linear Regression II"
 author: "Whitney"
 date: '`r format(Sys.time(), "%B %d, %Y")`'
 output:
