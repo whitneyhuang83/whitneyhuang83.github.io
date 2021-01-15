@@ -1,0 +1,111 @@
+---
+title: 'DSA 8020 R Lab 1: Simple Linear Regression'
+author: "your name here, (the names of any collaborators)"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Leaning Tower of Pisa
+
+The dataset \texttt{PisaTower.csv} provides the annual measurements of the lean (the difference
+between where a point on the tower would be if the tower were straight and where it
+actually is) from 1975 to 1987. We would like to characterize lean over time by fitting a simple linear regression.
+
+
+## Load the dataset
+
+**Code:**
+
+```{r}
+
+```
+
+
+## Descriptive analysis
+
+### Numerical summary
+
+**Code:**
+
+```{r}
+
+```
+
+### Graphical summary
+
+**Code:**
+
+```{r}
+
+```
+
+
+**Question:** Describe the direction, strength, and the form of the relationship.
+
+**Answer:**
+
+## Simple linear regression
+
+
+1. Identify the response variable, the predictor variable, and the sample size.
+
+**Answer:**
+
+2. Fit a simple linear regression 
+
+**Code:**
+
+```{r}
+
+```
+
+3. Write down the fitted linear regression model 
+
+**Answer:**
+
+4. What is $\hat{\sigma}$, the estimate of $\sigma$
+
+**Answer:**
+
+5. Find a 95% confidence interval for $\beta_{1}$
+
+**Code:**
+
+```{r}
+
+```
+
+6. Test the following hypothesis: $H_{0}: \beta_{1} = 0$ vs. $H_{a} : \beta_{1} \neq 0$ with $\alpha = 0.05$
+
+**Answer:**
+
+
+7. Construct a 90% confidence interval for $\mathrm{E}[Lean]$ in year 1984
+
+**Code:**
+
+```{r}
+
+```
+
+8. Use residuals to check model assumptions 
+
+**Code:**
+
+```{r}
+
+```
+
+**Answer:**
+
+9. Would it be a good idea to use the fitted linear regression equation to predict \texttt{lean} in year 2010? Explain your answer. 
+
+**Answer:**
