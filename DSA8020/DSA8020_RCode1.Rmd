@@ -1,0 +1,240 @@
+---
+title: 'DSA 8020 R Session 1: Simple Linear Regression'
+author: "Whitney Huang"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The main purpose of this lab is to review how to use \texttt{R} to conduct a simple linear regression analysis
+
+# Example: Maximum Heart Rate vs. Age
+
+The maximum heart rate ($\text{HR}_{max}$) of a person is often said to be related to age (Age) by the equation:
+$$\text{HR}_{max} = 220 - \text{Age}$$
+
+Let's use a dataset to assess this statement.
+
+
+## Load the dataset
+
+There are several ways to load a dataset into R, for example, one could importing the data over the Internet
+
+```{r}
+dat <- read.csv('http://whitneyhuang83.github.io/STAT8010/Data/maxHeartRate.csv', header = T) 
+head(dat)
+```
+
+
+## Examine the data before fitting models
+
+```{r}
+y <- dat$MaxHeartRate; x <- dat$Age
+summary(dat)
+var(x); var(y)
+cov(x, y)
+cor(x, y)
+```
+
+## Plot the data before fitting models
+
+This is what the scatterplot would look like by default. Put predictor (age) to the first argument and response (maxHeartRate) to the second argument.
+
+
+```{r}
+plot(x, y)
+```
+
+Let's make the plot look nicer (type ?plot to learn more).
+
+```{r}
+par(las = 1, mar = c(4.1, 4.1, 1.1, 1.1))
+plot(x, y, pch = 16, xlab = "Age (Yr)", ylab = "Max heart rate (bpm)")
+grid()
+```
+
+
+# Simple linear regression
+
+## Estimation
+
+Let's do the calculations to figure out the regression coefficients as well as the standard deviation of the random error.   
+
+### Slope: $\hat{\beta}_{1} = \frac{\sum_{i=1}^{n}(y_{i}-\bar{y})(x_{i}-\bar{x})}{\sum_{i=1}^{n}(x_{i}-\bar{x})^2}$
+
+```{r}
+y_diff <- y - mean(y)
+x_diff <- x - mean(x)
+beta_1 <- sum(y_diff * x_diff) / sum((x_diff)^2)
+beta_1
+```
+
+### Intercept: $\hat{\beta}_{0}= \bar{y}-\bar{x}\hat{\beta}_{1}$
+
+```{r}
+beta_0 <- mean(y) - mean(x) * beta_1
+beta_0
+```
+
+### Fitted values: $\hat{y} = \hat{\beta}_{0}+\hat{\beta}_{1}x$
+
+```{r}
+y_hat <- beta_0 + beta_1 * x
+y_hat
+```
+
+### $\hat{\sigma}$: $\hat{\sigma}^2 = \frac{\sum_{i=1}^{n}(y_{i}-\hat{y}_{i})^2}{n-2}$
+
+```{r}
+sigma2 <- sum((y - y_hat)^2) / (length(y) - 2)
+sqrt(sigma2)
+```
+
+Add the fitted regression line to the scatterplot
+
+```{r}
+par(las = 1, mar = c(4.1, 4.1, 1.1, 1.1))
+plot(x, y, pch = 16, xlab = "Age", ylab = "Max heart rate (bpm)")
+grid()
+abline(a = beta_0, b = beta_1, col = "red")
+```
+
+Let R do all the work
+
+```{r}
+fit <- lm(MaxHeartRate ~ Age, data = dat)
+summary(fit)
+```
+
+* Regression coefficients
+
+```{r}
+fit$coefficients
+```
+
+* Fitted values
+
+```{r}
+fit$fitted.values
+```
+
+* $\hat{\sigma}$
+
+```{r}
+summary(fit)$sigma
+```
+
+## Model Checking
+
+### Residual plots
+
+```{r}
+## res vs. x
+par(las = 1, mar = c(4.1, 4.1, 1.1, 1.1))
+plot(x, fit$residuals, pch = 16, ylab = "Residuals")
+abline(h = 0, col = "red", lty = 2)
+## res vs. yhat
+par(las = 1, mar = c(4.1, 4.1, 1.1, 1.1))
+plot(fit$fitted.values, fit$residuals, pch = 16, ylab = "Residuals", xlab = expression(hat(y)))
+abline(h = 0, col = "red", lty = 2)
+```
+
+### Assessing normality of random error
+
+```{r}
+# histogram
+hist(fit$residuals)
+hist(fit$residuals, col = "lightblue", border = "gray", las = 1)
+# qqplot
+qqnorm(fit$residuals, pch = 16, las = 1)
+qqline(fit$residuals)
+```
+
+
+## Statistical Inference
+
+### Confidence Intervals for $\beta_{0}$ and $\beta_{1}$
+
+```{r}
+alpha = 0.05
+beta1_hat <- summary(fit)[["coefficients"]][, 1][2]
+se_beta1 <- summary(fit)[["coefficients"]][, 2][2]
+CI_beta1 <- c(beta1_hat - qt(1 - alpha / 2, 13) * se_beta1,
+              beta1_hat + qt(1 - alpha / 2, 13) * se_beta1)
+CI_beta1
+# 
+confint(fit)
+```
+
+### Confidence and prediction intervals for $\mathrm{E}[Y_{new}|x_{new} = 40]$
+
+```{r}
+Age_new = data.frame(Age = 40)
+hat_Y <- fit$coefficients[1] + fit$coefficients[2] * 40
+hat_Y
+predict(fit, Age_new, interval = "confidence", level = 0.9) 
+predict(fit, Age_new, interval = "predict", level = 0.95)
+```
+
+
+### Check
+
+```{r}
+sd <- sqrt((sum(fit$residuals^2) / 13))
+ME <- qt(1 - alpha / 2, 13) * sd * sqrt(1 + 1 / 15 + (40 - mean(x))^(2) / sum((x - mean(x))^2))
+c(hat_Y - ME, hat_Y + ME)
+```
+
+### Constrcuting pointwise CIs/PIs
+
+```{r}
+Age_grid = data.frame(Age = 18:72)
+CI_band <- predict(fit, Age_grid, interval = "confidence") 
+PI_band <- predict(fit, Age_grid, interval = "predict")
+
+plot(dat$Age, dat$MaxHeartRate, pch = 16, cex = 0.75,
+     xlab = "Age (Yr)", ylab = "Maximum Heart Rate (bpm)", las = 1)
+abline(fit, col = "blue")
+abline(v = mean(dat$Age), lty = 2, col = "gray")
+abline(h = mean(dat$MaxHeartRate), lty = 2, col = "gray")
+lines(18:72, CI_band[, 2], lty = 2, col = "blue")
+lines(18:72, CI_band[, 3], lty = 2, col = "blue")
+lines(18:72, PI_band[, 2], lty = 2, col = "darkgreen")
+lines(18:72, PI_band[, 3], lty = 2, col = "darkgreen")
+legend("topright", legend = c("CI", "PI"), col = c("blue", "darkgreen"), lty = 2, bty = "n")
+```
+
+
+### Hypothesis Tests for $\beta_{1}$
+
+$H_{0}: \beta_{1} = -1$ vs. $H_{a}: \beta_{1} \neq -1$ with $\alpha = 0.05$
+
+```{r}
+beta1_null <- -1
+t_star <- (beta1_hat - beta1_null) / se_beta1
+p_value <- 2 * pt(t_star, 13, lower.tail = F) 
+p_value
+
+par(las = 1)
+x_grid <- seq(-3.75, 3.75, 0.01)
+y_grid <- dt(x_grid, 13)
+plot(x_grid, y_grid, type = "l", xlab = "Test statistic", ylab = "Density", xlim = c(-3.75, 3.75))
+polygon(c(x_grid[x_grid < -t_star], rev(x_grid[x_grid < -t_star])),
+        c(y_grid[x_grid < -t_star], rep(0, length(y_grid[x_grid < -t_star]))), col = "skyblue")
+
+polygon(c(x_grid[x_grid > t_star], rev(x_grid[x_grid > t_star])),
+        c(y_grid[x_grid > t_star], rep(0, length(y_grid[x_grid > t_star]))), col = "skyblue")
+abline(v = t_star, lty = 2)
+abline(v = -t_star, lty = 2)
+abline(h = 0)
+```
+
+
+
+
