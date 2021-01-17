@@ -1,0 +1,127 @@
+---
+title: 'DSA 8020 R Lab 2: Multiple Linear Regression I'
+author: "your name here, (the names of any collaborators)"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Housing Values in Suburbs of Boston
+
+The Boston housing data was collected in 1978, each of the 506 entries represent aggregated data about 14 features for homes from various suburbs in Boston, MA. 
+
+*Data Source:* Harrison, D. and Rubinfeld, D.L. (1978) Hedonic prices and the demand for clean air. **J. Environ. Economics and Management** 5, 81–102.
+
+
+## Load the dataset
+
+**Code:**
+
+```{r}
+library(MASS)
+data(Boston)
+head(Boston)
+```
+
+For the purposes of this lab, we will use only the following variables for conducting data analysis:
+
+1. \texttt{medv}: median value of owner-occupied homes in $\$1000s$; 
+
+2. \texttt{lstat}: lower status of the population (percent);
+
+3. \texttt{rm}: average number of rooms per dwelling;
+
+4. \texttt{crim}: per capita crime rate by town
+
+**Code:**
+
+You can use the code below to extract these variables
+
+```{r}
+vars <- c("medv", "lstat", "rm", "crim")
+data <- Boston[, vars]
+```
+
+ 
+## Exploratory Data Analysis
+
+### Numerical summary
+
+1. Use \texttt{summary} commend to produce various numerical summmaries of each of the 4 variables under consideration  
+
+**Code:**
+
+```{r}
+
+```
+
+### Graphical summary
+
+2. Make a boxplot for each variable 
+
+**Code:**
+
+```{r}
+
+```
+
+3. Briefly discuss the shape of the distribution of each variable
+
+**Answer:**
+
+
+4. Create a scatterplot matrix to explore the inter-dependence between these these variables 
+
+**Code:**
+
+```{r}
+
+```
+
+## Model Fitting 
+
+Here we will use \texttt{medv} as the response and \texttt{lstat}, \texttt{rm}, \texttt{crim} as predictors.  
+
+### Simple Linear Regression
+
+5. Fit a simple linear regression
+
+**Code:**
+
+```{r}
+
+```
+
+6. Write down the fitted linear regression equation.
+
+**Answer:**
+
+### Multiple Linear Regression
+
+7. Fit a multiple linear regression using all predictors
+
+**Code:**
+
+```{r}
+
+```
+
+8. Write down the fitted linear regression equation
+
+**Answer:**
+
+9. Perform an overall F-test, state the hypotheses, test statistic, p-value, decision, and
+conclusion 
+
+**Answer:**
+
+
+
+
