@@ -1,0 +1,148 @@
+---
+title: "DSA 8020 R Session 3: Multiple Linear Regression II"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 8.5
+    fig_height: 6.5
+    fig_caption: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Species diversity on the Galapagos Islands
+
+### Load the data
+
+```{r}
+library(faraway)
+data(gala)
+galaNew <- gala[, -2] # removing "Endemics"
+```
+
+### General Linear F-Test
+
+```{r}
+## First example
+# Reduce Moddel
+M1 <- lm(Species ~ Elevation, data = galaNew)
+summary(M1)
+# "Full" Model
+M2 <- lm(Species ~ Elevation + Area, data = galaNew)
+summary(M2)
+## General Linear F-Test
+anova(M1, M2)
+# p-value
+par(las = 1, mar = c(4.1, 4.1, 1.1, 1.1))
+xg <- seq(0, 3, 0.01); yg <- df(xg, 1, 27)
+plot(xg, yg, type = "l", xaxs = "i", yaxs = "i", lwd = 1.6,
+     xlab = "F test statistic", ylab = "Density")
+abline(v = 0.5254, lty = 2, col = "gray")
+polygon(c(xg[xg > 0.5254], rev(xg[xg > 0.5254])),
+        c(yg[xg > 0.5254], rep(0, length(yg[xg > 0.5254]))),
+        col = "skyblue")
+# Another example
+Full <- lm(Species ~ ., data = galaNew)
+Reduce <- lm(Species ~ Elevation + Adjacent, data = galaNew)
+## General Linear F-Test
+anova(Reduce, Full)
+```
+
+### Prediction
+
+```{r}
+data(fat)
+lmod <- lm(brozek ~ age + weight + height + neck + chest + abdom + hip + thigh + knee
+           + ankle + biceps + forearm + wrist, data = fat)
+
+X <- model.matrix(lmod)
+(x0 <- apply(X, 2, median))
+(y0 <- sum(x0 * coef(lmod)))
+predict(lmod, new = data.frame(t(x0)))
+predict(lmod, new = data.frame(t(x0)), interval = "prediction")
+predict(lmod, new = data.frame(t(x0)), interval = "confidence", alpha = 0.)
+```
+
+
+### Multicollinearity
+
+```{r, message=FALSE}
+set.seed(123)
+N = 500
+library(MASS)
+x <- replicate(N, mvrnorm(n = 30, c(0, 0), matrix(c(1, 0.9, 0.9, 1), 2)))
+y <- array(dim = c(30, N))
+for (i in 1:N){
+  y[, i] = 4 + 0.8 * x[, 1, i] + 0.6 * x[, 2, i] + rnorm(30)
+}
+# Grab the first simulated data 
+sim1 <- data.frame(y = y[, 1], x1 = x[, 1, 1], x2 = x[, 2, 1])
+# Make the scatterplot matrix
+pairs(sim1, las = 1, col = "blue")
+# Compute the correlation matrix
+cor(sim1)
+
+# Save the fitted regression coefficients
+beta <- array(dim = c(3, N))
+for (i in 1:N){
+  beta[, i] <- lm(y[, i] ~ x[, 1, i] + x[, 2, i])$coefficients
+}
+
+R.sq_M1 <- numeric(N)
+for (i in 1:N){
+  R.sq_M1[i] <- summary(lm(y[, i] ~ x[, 1, i] + x[, 2, i]))$r.squared
+}
+
+summary(R.sq_M1)
+
+
+plot(beta[2,], beta[3,], pch = 16, cex = 0.5,
+     xlab = expression(beta[1]),
+     ylab = expression(beta[2]), las = 1)
+points(0.8, 0.6, pch = "*", cex = 3, col = "red")
+abline(h = 0, lty = 2, col = "gray")
+abline(v = 0, lty = 2, col = "gray")
+
+library(fields)
+quilt.plot(beta[2,], beta[3, ], R.sq_M1)
+points(0.8, 0.6, pch = "*", cex = 3)
+abline(h = 0, lty = 2, col = "gray")
+abline(v = 0, lty = 2, col = "gray")
+
+# Compute the VIF
+vif(sim1[, 2:3])
+
+## Another simulation where the predictors are indepdent to each other
+x1 <- replicate(N, mvrnorm(n = 30, c(0, 0), matrix(c(1, 0, 0, 1), 2)))
+y1 <- array(dim = c(30, N))
+for (i in 1:N){
+  y1[, i] = 4 + 0.8 * x1[, 1, i] + 0.6 * x1[, 2, i] + rnorm(30)
+}
+beta1 <- array(dim = c(3, N))
+for (i in 1:N){
+  beta1[, i] <- lm(y1[, i] ~ x1[, 1, i] + x1[, 2, i])$coefficients
+}
+
+plot(beta1[2,], beta1[3,], pch = 16, cex = 0.5,
+     xlab = expression(beta[1]),
+     ylab = expression(beta[2]), las = 1)
+points(0.8, 0.6, pch = "*", cex = 3, col = "red")
+abline(h = 0, lty = 2, col = "gray")
+abline(v = 0, lty = 2, col = "gray")
+
+R.sq_M2 <- numeric(N)
+for (i in 1:N){
+  R.sq_M2[i] <- summary(lm(y1[, i] ~ x1[, 1, i] + x1[, 2, i]))$r.squared
+}
+summary(R.sq_M2)
+# Compute the VIF
+vif(x1[, 1:2, 1])
+```
+
+
+
