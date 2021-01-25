@@ -1,0 +1,175 @@
+---
+title: 'DSA 8020 R Lab 3: Multiple Linear Regression II'
+author: "your name here, (the names of any collaborators)"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Percentage of Body Fat and Body Measurements
+
+Age, weight, height, and 10 body circumference measurements are recorded for 252 men. Each man's percentage of body fat was accurately estimated by an underwater weighing technique.
+
+
+
+*Data Source:* Johnson R. *Journal of Statistics Education* v.4, n.1 (1996)
+
+
+## Load the dataset
+
+**Code:**
+
+```{r}
+library(faraway)
+data(fat)
+head(fat)
+```
+
+For the purposes of this lab, we will use only the following variables for conducting data analysis:
+
+1. $y$ \texttt{brozek}: Percent body fat using Brozek's equation
+$$\frac{457}{\text{Density}} - 414.2$$
+
+2. $x_{1}$ \texttt{age}: Age (yrs); 
+
+3. $x_2$\texttt{weight}: Height (inches);
+
+4. $x_3$ \texttt{height}: Height (inches);
+
+5. $x_4$\texttt{chest}: Chest circumference (cm);
+
+6. $x_5$ \texttt{abdom}: Abdomen circumference (cm) at the umbilicus and level with the iliac crest
+
+**Code:**
+
+You can use the code below to extract these variables
+
+```{r}
+vars <- c("brozek", "age", "weight", "height", "chest", "abdom")
+data <- fat[, vars]
+```
+
+ 
+## Exploratory Data Analysis
+
+### Numerical summary
+
+1. Use \texttt{summary} commend to produce various numerical summmaries of each of the 6 variables under consideration  
+
+**Code:**
+
+```{r}
+
+```
+
+### Graphical summary
+
+2. Make a boxplot for each variable 
+
+**Code:**
+
+```{r}
+
+```
+
+3. Briefly discuss the shape of the distribution of each variable
+
+**Answer:**
+
+
+4. Create a scatterplot matrix to explore the inter-dependence between these these variables 
+
+**Code:**
+
+```{r}
+
+```
+
+## General Linear F-Test
+
+Suppose a researcher would like to compare between the "Full" model using all the 5 predictors and a "reduce" model where only $x_{2}$ (\texttt{age}) and $x_{5}$ (\texttt{abdom}) are used by performing a general linear F-test:
+
+5. Write down the null and the alternative hypotheses
+
+**Answer:**
+
+6. Fit the full model and write down the fitted linear regression equation.
+
+**Code:**
+
+```{r}
+
+```
+
+**Answer:**
+
+7. Fit the reduce model and write down the fitted linear regression equation.
+
+**Code:**
+
+```{r}
+
+```
+
+**Answer:**
+
+8. Perform a general linear F-test and state the conclusion at $\alpha = 0.05$
+
+**Code:**
+
+```{r}
+
+```
+
+**Answer:**
+
+## Prediction
+
+9. Predict a future response for an individal with \texttt{age} $=54$, \texttt{weight} $=197$, \texttt{height} $=72.25$, \texttt{chest} $=105.375$, and \texttt{abdom} $= 99.325$. Construct a 95% prediction interval.
+
+**Code:**
+
+```{r}
+
+```
+
+
+**Answer:**
+
+10. Construct a 95% confidence interval for the mean response of percent body fat
+ with \texttt{age} $=54$, \texttt{weight} $=197$, \texttt{height} $=72.25$, \texttt{chest} $=105.375$, and \texttt{abdom} $= 99.325$.
+ 
+## Multicollinearity
+
+
+11. Make the scatterplot matrix and compute the correlation matrix for all 6 variables (including the response).
+
+**Code:**
+
+```{r}
+
+```
+
+
+
+
+12. Calculate VIF and briefly discuss your finding
+
+**Code:**
+
+```{r}
+
+```
+
+**Answer:**
+
+
+
+
