@@ -1,0 +1,235 @@
+---
+title: "DSA 8020 R Session 7: Logistic Regression and Poisson Regression"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 6
+    fig_height: 5.5
+    fig_caption: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Logistic Regression: Horseshoe Crab Malting
+
+
+*Data Source:* Brockmann, H. J. (1996). Satellite male groups in horseshoe crabs, Limulus polyphemus. *Ethology*, 102(1), 1-21.
+
+### Load the data 
+
+
+```{r}
+crab <- read.table("http://users.stat.ufl.edu/~aa/cda/data/Crabs.dat", header = T)
+```
+
+### Fit a Linear Regression 
+
+Let's fit a simple linear regression using \texttt{weight} as the predictor
+
+```{r}
+lmFit <- lm(y ~ weight, data = crab)
+par(mar = c(3.5, 3.5, 0.8, 0.6))
+with(crab, plot(weight, y, pch = 16,
+                cex = 0.75, las = 1, xlab = "", ylab = ""))
+mtext("Weight (kg)", side = 1, line = 2)
+abline(lmFit, col = "red")
+```
+
+### Fit a Logistic Regression
+
+```{r}
+logitFit <- glm(y ~ weight, data = crab, family = "binomial")
+summary(logitFit)
+# Plot the fits
+rg <- range(crab$weight)
+xg <- seq(rg[1], rg[2], 0.01)
+pred <- predict(logitFit, newdata = data.frame(weight = xg), type = "response")
+par(mar = c(3.5, 3.5, 0.8, 0.6))
+plot(crab$weight, crab$y, pch = 16, cex = 0.75, las = 1, xlab = "", ylab = "")
+mtext("Weight (kg)", side = 1, line = 2)
+abline(lmFit, col = "red")
+lines(xg, pred, col = "blue")
+legend("bottomright", legend = c("SLR", "Logistic"),
+       col = c("red", "blue"), lty = 1, bty = "n")
+```
+
+### Confidence Intervals
+
+```{r}
+# Normal approximation
+est <- summary(logitFit)$coefficients
+(CI_norm <- est[2, 1] + c(-1, 1) * qnorm(0.975) * est[2, 2])
+
+# Profile likelihood CI
+library(MASS)
+(CI_prof <- confint(logitFit)[2,])
+
+plot(1, type = "n", xlab = "", ylab = "",
+     xlim = c(1, 2.6), ylim = c(-0.05, 0.1),
+     yaxt = "n", main = expression(hat(beta[1])))
+segments(CI_norm[1], 0, CI_norm[2], col = "red")
+segments(CI_prof[1], 0.05, CI_prof[2], col = "blue")
+abline(v = est[2, 1], lty = 2, col = "gray")
+legend("topleft", legend = c("norm", "prof"),
+       col = c("red", "blue"), lty = 1,
+       lwd = 0.8, bty = "n")
+```
+
+### Prediction
+
+```{r}
+pred <- predict(logitFit, newdata = data.frame(weight = xg), se.fit = TRUE)
+
+fit <- pred$fit; se <- pred$se.fit
+
+plot(xg, exp(fit) / (1 + exp(fit)),
+     type = "l", col = "blue", ylim = c(0, 1),
+     las = 1, xlab = "Weight", ylab = expression(pi))
+lines(xg, exp(fit + 1.96 * se) / (1 + exp(fit + 1.96 * se)), lty = 2)
+lines(xg, exp(fit - 1.96 * se) / (1 + exp(fit - 1.96 * se)), lty = 2)
+```
+
+### Raw Residual plot
+
+```{r}
+res <- resid(logitFit, type = "response")
+pred <- predict(logitFit)
+
+plot(pred, res, col = "blue", pch = 16,
+     xlab = "Predicted values",
+     ylab = "Raw residuals")
+abline(h = 0, lty = 2)
+```
+
+
+### Binned Residuals 
+
+```{r,message=FALSE}
+wt_bin <- findInterval(crab$weight, unique(quantile(crab$weight, seq(0, 1, length.out = 20 + 1))), rightmost.closed = TRUE)
+library(dplyr)
+crab.res <- mutate(crab, residuals = residuals(logitFit), Linpred = predict(logitFit), bin = wt_bin)
+
+res_bin <- tapply(crab.res$residuals, crab.res$bin, mean)
+Lpred_bin <- tapply(crab.res$Linpred, crab.res$bin, mean)
+
+plot(res_bin ~ Lpred_bin, xlab = "Predicted values",
+     ylab = "Binned residuals", col = "blue", pch = 16, las = 1)
+abline(h = 0, lty = 2)
+```
+
+### Model selection
+
+```{r}
+logitFit2 <- glm(y ~ weight + width, data = crab, family = "binomial")
+summary(logitFit2)
+step(logitFit2)
+```
+
+## Poisson Regression
+
+### Flying-Bomb Hits on London During World War II [Clarke, 1946; Feller, 1950]
+
+```{r}
+count <- c(229, 211, 93, 35, 7, 1)
+grids <- 576
+hits <- 537
+lambda <- hits / grids
+count_expected <- c(grids * dpois(0:4, lambda = lambda), grids * ppois(4, lambda = lambda, lower.tail = F))
+round(count_expected, 1)
+```
+
+### US Landfalling Hurriances 
+
+```{r}
+# load the hurriance count
+con = "http://myweb.fsu.edu/jelsner/Book/Chap07/US.txt"
+hurricanes = read.table(con, header = T)
+head(hurricanes)
+
+par(las = 1, mar = c(4.6, 3.9, 0.8, 0.6))
+layout(matrix(c(1, 2), 1, 2, byrow = TRUE), widths = c(0.57, 0.43))
+plot(hurricanes$Year, hurricanes$All, type = "h", xlab = "Year", ylab = "Hurricane count")
+grid()
+barplot(table(hurricanes$All), xlab = "Hurricane Count", ylab = "Number of years", main = "")
+```
+
+### Load the environmetal variables
+
+```{r}
+load("annual.RData")
+data <- data.frame(All = hurricanes$All, SOI = annual$soi,
+                   NAO = annual$nao, SST = annual$sst,
+                   SSN = annual$ssn)
+data <- data[-(1:15),]
+with(data, plot(All ~ SOI, las = 1))
+```
+
+
+```{r}
+H <- hurricanes
+
+par(mfrow = c(2, 2), mar = c(4.5, 4, 1, 0.6))
+plot(range(annual$sst, na.rm = TRUE), c(0, 7), type = "n", ylab = "Hurricane count", xlab = "SST",
+     las = 1)
+for(i in 0:7){
+  points(fivenum(annual$sst[H$All == i])[3], i, pch = 19)
+  lines(c(fivenum(annual$sst[H$All == i])[1], fivenum(annual$sst[H$All == i])[2]), c(i, i))
+  lines(c(fivenum(annual$sst[H$All == i])[4], fivenum(annual$sst[H$All == i])[5]), c(i, i))
+}
+plot(range(annual$soi, na.rm = TRUE), c(0, 7), type = "n", ylab = "Hurricane count", xlab = "SOI",
+     las = 1)
+
+for(i in 0:7){
+  points(fivenum(annual$soi[H$All == i])[3], i, pch=19)
+  lines(c(fivenum(annual$soi[H$All == i])[1], fivenum(annual$soi[H$All == i])[2]), c(i, i))
+  lines(c(fivenum(annual$soi[H$All == i])[4], fivenum(annual$soi[H$All == i])[5]), c(i, i))
+}
+plot(range(annual$nao, na.rm = TRUE), c(0, 7), type = "n", ylab = "Hurricane count", xlab = "NAO",
+     las = 1)
+
+for(i in 0:7){
+  points(fivenum(annual$nao[H$All == i])[3], i, pch=19)
+  lines(c(fivenum(annual$nao[H$All == i])[1], fivenum(annual$nao[H$All == i])[2]), c(i, i))
+  lines(c(fivenum(annual$nao[H$All == i])[4], fivenum(annual$nao[H$All == i])[5]), c(i, i))
+}
+plot(range(annual$ssn, na.rm = TRUE), c(0, 7), type = "n", ylab = "Hurricane count",
+     xlab = "Sunspot number", las = 1)
+
+for(i in 0:7){
+  points(fivenum(annual$ssn[H$All == i])[3], i, pch = 19)
+  lines(c(fivenum(annual$ssn[H$All == i])[1], fivenum(annual$ssn[H$All == i])[2]), c(i, i))
+  lines(c(fivenum(annual$ssn[H$All == i])[4], fivenum(annual$ssn[H$All == i])[5]), c(i, i))
+}
+```
+
+### Linear Regression 
+
+```{r}
+lmFull <- lm(All ~ ., data = data)
+predict(lmFull, newdata = data.frame(SOI = -3, NAO = 3, SST = 0, SSN = 250))
+
+plot(lmFull, which = 1)
+plot(lmFull, which = 3)
+```
+
+### Poisson Regression
+
+```{r}
+PoiFull <- glm(All ~ ., data = data, family = "poisson")
+summary(PoiFull)
+
+plot(data$SOI, hurricanes$All[-(1:15)], cex = 0.75, col = "gray",
+     xlab = "", ylab = "", las = 1)
+mtext("Hurricane Count", side = 2, line = 2)
+mtext("Year", side = 1, line = 2)
+points(data$SOI, predict(lmFull), col = "red",
+       cex = 0.5, pch = 16)
+points(data$SOI, predict(PoiFull, type = "response"), col = "blue", cex = 0.5, pch = 16)
+```
+
