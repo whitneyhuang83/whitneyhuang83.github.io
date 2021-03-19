@@ -1,0 +1,140 @@
+---
+title: "DSA 8020 R Session 10: Random and Mixed Effects Models and Computer Experiments"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 8.5
+    fig_height: 7
+    fig_caption: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Random Effects Example
+
+Suppose that an agronomist is studying a large number of varieties of soybeans for yield. The agronomist randomly selects three varieties, and then randomly assigns each of those varieties to 10 of 30 available plots. 
+
+
+Model:
+$y_{ij} = \mu + \alpha_{i} + \epsilon_{ij},$
+$\alpha_{i}s \stackrel{i.i.d.}{\sim} \mathrm{N}(0, \sigma^{2}_{\alpha})$, $\epsilon_{ij}s \stackrel{i.i.d.}{\sim} \mathrm{N}(0, \sigma^{2})$. $\alpha_{i}s$ and $\epsilon_{ij}s$ are independent to each other
+
+### Read the data into R
+
+```{r}
+v1 <- c(6.6, 6.4, 5.9, 6.6, 6.2, 6.7, 6.3, 6.5, 6.5, 6.8)
+v2 <- c(5.6, 5.2, 5.3, 5.1, 5.7, 5.6, 5.6, 6.3, 5.0, 5.4)
+v3 <- c(6.9, 7.1, 6.4, 6.7, 6.5, 6.6, 6.6, 6.6, 6.8, 6.8)
+yield <- c(v1, v2, v3)
+var <- factor(c(rep(1, 10), rep(2, 10), rep(3, 10)))
+plot(yield ~ var, las = 1)
+```
+
+### Fitting a fixed effects model
+
+```{r}
+fixef <- lm(yield ~ var)
+anova(fixef)
+coefficients(fixef)
+```
+
+### Fitting a random effects model
+
+
+```{r}
+library(lme4)
+randef <- lmer(yield ~ 1 + (1|var), REML = TRUE)
+summary(randef)
+```
+
+Let's construct CIs for $\sigma^{2}_{\alpha}$, $\sigma^2$, and $\mu$
+
+```{r}
+## Compute the confidence intervals (CIs) using profile likelihood
+CIs <- confint(randef, oldNames = FALSE)
+CIs
+```
+
+## RCBD: Fixed vs. Random Block
+
+### Load R libraries
+
+```{r}
+library(lsmeans)
+library(lmerTest)
+```
+
+### Read the data
+```{r}
+### Create the data set
+x <- c(52, 47, 44, 51, 42, 60, 55, 49, 52, 43, 56, 48, 45, 44, 38)
+trt <- rep(c("A", "B", "C"), each = 5)
+blk <- rep(1:5, 3)
+dat <- data.frame(x = x, trt = trt, blk = as.factor(blk))
+```
+
+### Fixed block 
+
+```{r}
+fixef <- lm(x ~ trt + blk, data = dat)
+anova(fixef)
+```
+
+### Random block
+
+```{r}
+randef <- lmer(x ~ trt + (1|blk), REML = TRUE, data = dat)
+summary(randef)
+lsmeans(randef, list(pairwise ~ trt), adjust = "none")
+```
+
+
+## Computer Experiments
+
+### Design: Latin hypercube
+
+```{r,message=FALSE}
+# install.packages("lhs") # Latin Hypercube Sample Package
+library(lhs)
+# Generate a good n x k LHD
+LHD = maximinLHS(n = 30, k = 3, dup = 5)
+# "dup" is an integer tuning parameter that determines the number of 
+# candidate points considered. Larger values should inprove results 
+# but require more computational resources.
+
+# Display the LHD
+LHD
+pairs(LHD)
+```
+
+### Analysis: Gaussian Process
+
+```{r,message=FALSE}
+# Load the data
+neuron <- read.table("http://deanvossdraguljic.ietsandbox.net/DeanVossDraguljic/R-data/neuron.txt", header = T)
+head(neuron, 10)
+# Fit a GP
+library(mlegp)
+GPFit <- mlegp(neuron[, 1:2], neuron[, 3])
+summary(GPFit)
+# Make prediction
+predictedX = expand.grid(g_NaF = seq(0, 1, 0.02), g_KDR = seq(0, 1, 0.02))
+yhats = predict(GPFit, predictedX, se.fit = T)
+# Visualize predictions and their uncertainty 
+library(fields)
+par(mfrow = c(1, 2))
+image.plot(seq(0, 1, 0.02), seq(0, 1, 0.02), matrix(yhats$fit, 51, 51),
+           xlab = "g NaF (mS/cm^2)", ylab = "g KDR (mS/cm^2)", las = 1,
+           main = "Predictions")
+points(neuron[, 1:2], pch = 16, cex = 0.75)
+image.plot(seq(0, 1, 0.02), seq(0, 1, 0.02), matrix(yhats$se.fit, 51, 51),
+           xlab = "g NaF (mS/cm^2)", ylab = "g KDR (mS/cm^2)", las = 1,
+           main = "Predictions Uncertinaty")
+points(neuron[, 1:2], pch = 16, cex = 0.75)
+```
