@@ -94,23 +94,22 @@ summary(randef)
 lsmeans(randef, list(pairwise ~ trt), adjust = "none")
 ```
 
-
 ## Computer Experiments
 
 ### Design: Latin hypercube
 
 ```{r,message=FALSE}
-# install.packages("lhs") # Latin Hypercube Sample Package
+# install.packages("lhs") # Latin Hypercube Sample #Package
 library(lhs)
 # Generate a good n x k LHD
-LHD = maximinLHS(n = 30, k = 3, dup = 5)
+LHD = maximinLHS(n = 30, k = 2, dup = 5)
 # "dup" is an integer tuning parameter that determines the number of 
 # candidate points considered. Larger values should inprove results 
 # but require more computational resources.
 
 # Display the LHD
 LHD
-pairs(LHD)
+pairs(LHD, col = "blue", cex = 0.8, pch = 16, las = 1)
 ```
 
 ### Analysis: Gaussian Process

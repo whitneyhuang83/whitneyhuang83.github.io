@@ -1,0 +1,187 @@
+---
+title: "DSA 8020 R Session 11: Principle Components Analysis"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 6
+    fig_height: 4
+    fig_caption: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## PCA: SST Example
+
+### Load and visualize the data
+
+```{r,message=FALSE}
+load("SST1.rda")
+library(fields)
+library(maps)
+par(las = 1, mar = c(3, 3, 1, 1))
+image.plot(lon1, lat1, SST1[,, 1], xaxt = "n", xlab = "", ylab = "")
+lon <- ifelse(lon1 <= 180, lon1, lon1 - 360)
+axis(1, at = lon1[seq(4, 84, 10)], lon[seq(4, 84, 10)])
+map("world2", add = TRUE, lwd = 2)
+```
+
+### Compute the SST anomalies by subtracting means
+
+```{r}
+t <- array(SST1, dim = c(84, 30, 12, 46))
+SST_temp <- apply(t, 1:3, function(x) x - mean(x, na.rm = T))
+# Change the data into lon-lat-month format 
+SST_anomalies <- array(dim = c(84, 30, 552))
+for (i in 1:84){
+  for (j in 1:30){
+    SST_anomalies[i, j,] <- c(t(SST_temp[, i, j,]))
+  }
+}
+```
+
+### EOFs
+
+```{r, message=FALSE}
+# Extracting first three EOFs via singular value decomposition
+temp <- array(SST_anomalies, c(84 * 30, 552))
+ind <- is.na(temp[, 1])
+temp <- temp[!ind, ]
+temp2 <- svd(temp)
+U1 <- matrix(NA, 84 * 30)
+U1[!ind] <- temp2$u[, 1]; U1 <- matrix(U1, 84, 30)
+U2 <- matrix(NA, 84 * 30)
+U2[!ind] <- temp2$u[, 2]; U2 <- matrix(U2, 84, 30)
+U3 <- matrix(NA, 84 * 30)
+U3[!ind] <- temp2$u[, 3]; U3 <- matrix(U3, 84, 30)
+zr <- range(c(U1, U2, U3), na.rm = TRUE)
+
+set.panel(3, 1)
+par(oma = c(0, 0, 0, 0))
+ct <- tim.colors(256)
+par(mar = c(1, 1, 1, 1))
+image(lon1, lat1, U1, axes = FALSE, xlab = "", ylab = "", zlim = zr, col = ct)
+map("world2", add = TRUE, lwd = 2)
+box()
+image(lon1, lat1, U2, axes = FALSE, xlab = "", ylab = "", zlim = zr, col = ct)
+map("world2", add = TRUE, lwd = 2)
+box()
+image(lon1, lat1, U3, axes = FALSE, xlab = "", ylab = "", zlim = zr, col = ct)
+map("world2", add = TRUE, lwd = 2)
+box()
+```
+
+
+### Screen plot
+
+```{r}
+par(mar = c(4, 4, 1, 1), mfrow = c(1, 2), las = 1)
+dt <- ((temp2$d^2)/sum(temp2$d^2))
+plot(1:50, dt[1:50], xlab = "Index", ylab = "Relative Variance",
+     pch = 16, cex = 0.8)
+grid()
+dt <- (cumsum(temp2$d^2)/sum(temp2$d^2))
+plot(1:50, dt[1:50], xlab = "Index", ylab = "Variance Explained", pch = 16, cex = 0.8)
+yline(0.5, col = "red", lwd = 2)
+grid()
+```
+
+### 1998 Jan El Ni\~no Event
+
+```{r, message=FALSE}
+V <- temp2$v %*% diag(temp2$d)
+J <- 337 # the index for 1998 Jan.
+zr <- range(SST_anomalies, na.rm = TRUE)
+set.panel(2, 2)
+par(mar = c(1, 1, 1, 1), oma = c(0, 0, 0, 6))
+image(lon1, lat1, SST_anomalies[, , J], axes = FALSE, xlab = "", ylab = "", 
+      col = tim.colors(256), zlim = zr)
+map("world2", add = TRUE)
+title("Data", adj = 0)
+image(lon1, lat1, V[J, 1] * U1, axes = FALSE, xlab = "", ylab = "", 
+      col = tim.colors(256), zlim = zr)
+map("world2", add = TRUE)
+title("EOF 1", adj = 0)
+image(lon1, lat1, V[J, 1] * U1 + V[J, 2] * U2, axes = FALSE, 
+      xlab = "", ylab = "", col = tim.colors(256), zlim = zr)
+map("world2", add = TRUE)
+title("EOF 1 and 2", adj = 0)
+image(lon1, lat1, V[J, 1] * U1 + V[J, 2] * U2 + V[J, 3] * U3, 
+      axes = FALSE, xlab = "", ylab = "", col = tim.colors(256), 
+      zlim = zr)
+map("world2", add = TRUE)
+title("EOF 1, 2 and 3", adj = 0)
+set.panel()
+par(oma = c(0, 0, 0, 0))
+image.plot(legend.only = TRUE, zlim = zr, horizontal = FALSE, legend.shrink = 0.6)
+```
+
+### Toy Examples 
+
+```{r}
+library(MASS)
+sim1 <- mvrnorm(n = 1000, mu = c(0, 0), Sigma = matrix(c(4, 0, 0, 1), 2, 2))
+plot(sim1, pch = 16, cex = 0.5, las = 1,
+     xlab = expression(X[1]),
+     ylab = expression(X[2]))
+abline(h = 0, col = "red", lwd = 1.5)
+abline(v = 0, col = "red", lwd = 0.75)
+grid()
+
+sim2 <- mvrnorm(n = 1000, mu = c(0, 0), Sigma = matrix(c(4, 1.6, 1.6, 1), 2, 2))
+plot(sim2, pch = 16, cex = 0.5, las = 1,
+     xlab = expression(X[1]),
+     ylab = expression(X[2]))
+abline(0, .4332, col = "red", lwd = 1.8)
+abline(0, -2.308, col = "red", lwd = 0.6)
+grid()
+```
+
+
+## Principal Component Regression
+
+### Longley's Economic Regression Data
+
+Longley's Economic data set provides a well-known example for a highly collinear regression.
+
+### Performing a linear regression
+
+```{r}
+data(longley)
+head(longley)
+round(cor(longley[, -7]), 3)
+library(faraway)
+vif(longley[, -7])
+lm <- lm(Employed ~ ., data = longley)
+summary(lm)
+```
+
+### Performing Principal Component Regression
+
+```{r,message=FALSE}
+longley.pca <- prcomp(longley[, -7], center = TRUE)
+vars <- longley.pca$sdev^2
+# Scrren plot
+par(mfrow = c(1, 2), mar = c(4.1, 4.1, 1.1, 1.1))
+plot(1:6, vars/sum(vars),
+     xlab = "PC", ylim = c(0, 1),
+     ylab = "Relative Variance",
+     pch = 16, cex = 0.8, las = 1,
+     col = "blue")
+grid()
+plot(1:6, cumsum(vars)/sum(vars),
+     xlab = "PC", ylim = c(0.7, 1),
+     ylab = "Variance Explained",
+     pch = 16, cex = 0.8, las = 1,
+     col = "blue")
+grid()
+# Performing PCR
+library(pls)
+pcrFit <- pcr(Employed ~ ., data = longley, valdiation = "cv")
+summary(pcrFit)
+```
+

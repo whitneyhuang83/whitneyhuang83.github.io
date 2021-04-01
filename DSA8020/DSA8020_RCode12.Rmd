@@ -1,0 +1,184 @@
+---
+title: "DSA 8020 R Session 11: Classification and Cluster Analysis"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 6
+    fig_height: 4
+    fig_caption: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Classification
+
+### Iris data
+
+```{r, message=FALSE, warning=FALSE}
+data(iris)
+head(iris)
+attach(iris) 
+
+library(car)
+scatterplotMatrix(~ Sepal.Length + Sepal.Width + Petal.Length + Petal.Width | Species,
+                  col = c("green", "blue", "red"), diagonal = F,
+                  smooth = F, regLine = F, legend = F)
+```
+
+### Binary classification
+
+```{r, message=FALSE}
+irisv = iris[51:150,]
+irisv$Species <- factor(irisv$Species)
+attach(irisv)
+
+scatterplotMatrix(~ Sepal.Length + Sepal.Width + Petal.Length + Petal.Width | Species,
+                  col = c("red", "blue"), diagonal = F,
+                  smooth = F, regLine = F, legend = F, cex = 0.75)
+```
+
+### PCA
+
+```{r}
+pca <- prcomp(irisv[, 1:4])
+Z <- pca$x
+lambda <- pca$sdev^2
+
+plot(1:4, lambda / sum(lambda), xaxt = "n", las = 1, xlab = "Rank of eigenvalues",
+     ylab = "Proportion of Variance", pch = 16, col = "blue", cex = 1, ylim = c(0, 1))
+grid(); axis(1, at = 1:4)
+
+scatterplotMatrix(~ Z | Species, col = c("red", "blue"), diagonal = F,smooth = F,
+                  regLine = F, legend = F, cex = 0.75)
+```
+
+### LDA
+
+```{r}
+library(MASS)
+par(las = 1)
+scatterplot(PC2 ~ PC1 | Species , Z, smooth = F, regLine = F, legend = F, cex = 0.85,
+            col = c("red", "blue"))
+fit <- lda(Species ~ Z[, 1:2]) 
+fit # show results
+abline(0, -fi
+       
+       
+       t$scaling[1] / fit$scaling[2], pch = 5, lwd = 2)
+points(2, 0.5, pch = "?", cex = 1.5)
+points(1.8, 0.5, pch = "*", cex = 2)
+```
+
+### LDA vs. QDA
+
+```{r}
+#treat data as matrix
+z = as.matrix(Z)
+
+lda <- lda(irisv$Species ~ Z[, 1:2]) 
+qda <- qda(irisv$Species ~ Z[, 1:2])
+
+fit.LDA = predict(lda)$class
+table(irisv$Species, fit.LDA)
+fit.QDA = predict(qda)$class
+table(irisv$Species, fit.QDA)
+
+# show results
+library(klaR)
+partimat(Species ~ Z[, 2:1], method = "lda", prec = 100, pch = 16, xaxt = "")
+partimat(Species ~ Z[, 2:1], method = "qda", prec = 100)
+```
+
+### Logistic Regression
+
+```{r,message=FALSE}
+logfit <- glm(irisv$Species ~ z[, 1:2], family = binomial)
+logpred <- predict(logfit, type = "response")
+library(fields)
+cols <- two.colors(n = 100, "darkblue", "darkred")
+order <- order(logpred)
+
+predCol <- ifelse(logpred <= 0.5, "blue", "red")
+Col <- rep(c("blue", "red"), each = 50)
+
+plot(z[order, 1:2], col = cols, pch = 1, las = 1)
+points(z[order, 1:2], col = Col[order], pch = 16, cex = 0.5)
+grid()
+
+plot(z[, 1:2], col = predCol, pch = 1, las = 1)
+points(z[, 1:2], col = Col, pch = 16, cex = 0.5)
+grid()
+legend("topleft", legend = c("True", "Predicted"), pch = c(16, 1), bty = "n")
+legend("topright", legend = c("versicolor", "virginica"),
+       col = c("blue", "red"), pch = 16, bty = "n")
+
+logisticPred <- ifelse(logpred <= 0.5, "versicolor", "virginica")
+table(irisv$Species, logisticPred)
+```
+
+## Clustering
+
+### K-Means Clustering
+
+```{r}
+set.seed(101)
+library(scales)
+x <- matrix(rnorm(100 * 2), 100, 2)
+xmean <- matrix(rnorm(8, sd = 4), 4, 2)
+which <- sample(1:4, 100, replace = TRUE)
+x = x + xmean[which,]
+plot(x, col = which, pch = 19)
+grid()
+```
+
+
+```{r}
+km.out <- kmeans(x, 4, nstart = 15)
+km.out
+plot(x, col = km.out$cluster, cex = 2, pch = 1, lwd = 2)
+points(x, col = which, pch = 19)
+points(x, col = c(4, 3, 2, 1)[which], pch = 19)
+```
+
+### Geyser Example
+
+```{r}
+km3.faithful <- kmeans(faithful, 3)
+km2.faithful <- kmeans(faithful, 2)
+km4.faithful <- kmeans(faithful, 4)
+
+par(las = 1, mfrow = c(1, 3))
+plot(faithful, col = km2.faithful$cluster, cex = 0.5, main = "K = 2")
+points(km2.faithful$centers, cex = 3, pch = "*", col = 1:2)
+grid()
+plot(faithful, col = km3.faithful$cluster, cex = 0.5, main = "K = 3")
+points(km3.faithful$centers, cex = 3, pch = "*", col = 1:3)
+grid()
+plot(faithful, col = km4.faithful$cluster, cex = 0.5, main = "K = 4")
+grid()
+points(km4.faithful$centers, cex = 3, pch = "*", col = 1:4)
+```
+
+
+### Model-based
+
+```{r,message=FALSE}
+library(mclust)
+BIC <- mclustBIC(faithful)
+model1 <- Mclust(faithful, x = BIC)
+
+plot(model1, what = "classification", cex = 0.5, las = 1)
+
+plot(model1, what = "density", col = "black", lwd = 1.5, las = 1)
+points(faithful, col = "blue", cex = 0.5)
+
+(LRT <- mclustBootstrapLRT(faithful, modelName = "VVV"))
+```
+
+
+
