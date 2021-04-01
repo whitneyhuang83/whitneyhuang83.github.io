@@ -1,0 +1,106 @@
+---
+title: 'DSA 8020 R Lab 8: Randomized Complete Block Designs and Factorial Designs'
+author: "your name here, (the names of any collaborators)"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+A researcher wish to determine whether 4 different tips produce different hardness readings on a Rockwell hardness tester, where a hardness tester operates by pressing a
+tip into a metal test "coupon". Since coupons are large enough to test four tips on,
+a RCBD can be used, with one coupon as a block. The data set *tip_hardness.csv* can be found in Canvas.
+
+
+1. Load the data into R
+
+**Code:**
+
+```{r}
+
+```
+
+
+2. Make side-by-side boxplots by treatment 
+
+**Code:**
+
+```{r}
+
+```
+
+3. Write down the effets model, explain each term in the model (including the model assumptions regarding the random error)
+
+**Answer:**
+
+
+
+4. Perform an overall F-test to the treatment effects using ANOVA, state the hypotheses, p-value, and conclusion 
+
+**Code:**
+
+```{r}
+
+```
+
+**Answer:**
+
+5. Use an interaction plot to assess the additivity assumption
+
+
+**Code:**
+
+```{r}
+
+```
+
+**Answer:**
+
+
+In a study to evaluate the impact of a certain bacterical strain (mycoplasma) on the development of birds, birds inoculated with bacteria or a control injection were studied in both cold and warm termperature controlled rooms. The response variable of interest was the bill length of birds in the rooms. The rooms were the experimental units, either at cold or warm temperatures, containing control or mycoplasma inoculated birds. Two runs of each combination were performed.The data is given below:
+
+Bact | Warm  | Cold 
+-----| ------|-----
+Control| 40.37, 41.71| 39.77, 40.23
+Mycoplasma|40.21, 40.78|39.19, 38.95
+
+6. Enter the data into R
+
+**Code:**
+
+```{r}
+
+```
+
+**Answer:**
+
+7. Construct an ANOVA table that includes the main effects for bacteria and temperature and their interaction. Test whether the main effects impact bill length. 
+
+**Code:**
+
+```{r}
+
+```
+
+**Answer:**
+
+8. Make an interaction plot and comment on the interaction effect
+
+**Code:**
+
+```{r}
+
+```
+
+**Answer:**
+
+
+
+
+
