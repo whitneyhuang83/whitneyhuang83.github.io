@@ -1,5 +1,5 @@
 ---
-title: "DSA 8020 R Session 11: Classification and Cluster Analysis"
+title: "DSA 8020 R Session 12: Classification and Cluster Analysis"
 author: "Whitney"
 date: '`r format(Sys.time(), "%B %d, %Y")`'
 output:
@@ -66,10 +66,7 @@ scatterplot(PC2 ~ PC1 | Species , Z, smooth = F, regLine = F, legend = F, cex = 
             col = c("red", "blue"))
 fit <- lda(Species ~ Z[, 1:2]) 
 fit # show results
-abline(0, -fi
-       
-       
-       t$scaling[1] / fit$scaling[2], pch = 5, lwd = 2)
+abline(0, -fit$scaling[1] / fit$scaling[2], pch = 5, lwd = 2)
 points(2, 0.5, pch = "?", cex = 1.5)
 points(1.8, 0.5, pch = "*", cex = 2)
 ```
