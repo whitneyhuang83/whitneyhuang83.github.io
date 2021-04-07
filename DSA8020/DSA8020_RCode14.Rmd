@@ -1,0 +1,115 @@
+---
+title: "DSA 8020 R Session 14: Spatial Interpolation"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 6
+    fig_height: 5
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Rainfall Data from Parana State, Brazil
+
+### Loading and summarizing the data
+
+```{r, message=FALSE}
+#install.packages("geoR")
+library(geoR)
+data(parana)
+summary(parana)
+library(fields)
+quilt.plot(parana$coords, parana$data, ny = 36, ylim = c(0, 600),
+           xlim = c(125, 800), xlab = "Easting", ylab = "Northing")
+lines(parana$borders)
+
+plot(parana, lowess = TRUE)
+plot(parana, trend = "1st", lowess = TRUE)
+```
+
+### Variogram Analysis
+
+```{r, message=FALSE}
+parana.vario <- variog(parana, max.dist = 300, cex = 0.5, option = "cloud")
+
+par(mfrow = c(1, 2))
+parana.vario <- variog(parana, max.dist = 300, cex = 0.5, option = "cloud")
+plot(parana.vario)
+parana.vario <- variog(parana, max.dist = 300, cex = 0.5)
+plot(parana.vario)
+```
+
+
+```{r}
+par(mfrow = c(1, 2))
+parana.vario <- variog(parana, max.dist = 300, cex = 0.5)
+plot(parana.vario)
+parana.variot <- variog(parana, trend = "1st",  max.dist = 300)
+plot(parana.variot)
+
+parana.v <- variog(parana, max.dist = 300)
+parana.v.env <- variog.mc.env(parana, obj.variog = parana.v)
+plot(parana.v, env = parana.v.env)
+parana.v4 <- variog4(parana, max.dist = 300)
+plot(parana.v4, env = parana.v.env, omni = TRUE)
+```
+
+### Parameter Estimation
+
+```{r, message=FALSE}
+# with linear trend
+parana.vtfit.exp <- variofit(parana.variot)
+parana.vtfit.mat1.5  <- variofit(parana.variot, kappa = 1.5)
+
+plot(parana.variot)
+lines(parana.vtfit.exp, col = "blue"); lines(parana.vtfit.mat1.5, col = 2)
+legend("topleft", legend = c("Exp", "Mat 1.5"), col = c("blue", "red"),
+       lty = 1, bty = "n")
+```
+
+### MLE
+
+```{r, message=FALSE}
+(parana.ml1 <- likfit(parana, trend = "1st", ini = c(1000, 50), nug = 100))
+(parana.ml2 <- likfit(parana, trend = "2nd", ini = c(1000, 50), nug = 100))
+```
+
+### Spatial Prediction
+
+```{r, fig.height=5,fig.width=4.6, fig.align="center"}
+parana.gr <- pred_grid(parana$borders, by = 15); points(parana)
+points(parana.gr, pch = 19, col = 2, cex = 0.25)
+parana.gr0 <- locations.inside(parana.gr, parana$borders)
+points(parana.gr0, pch = 19, col = 4, cex = 0.25)
+
+KC <- krige.control(obj.m = parana.ml1, trend.d = "1st", trend.l = "1st")
+OC <- output.control(simulations = TRUE, n.pred = 1000) 
+parana.kc <- krige.conv(parana, loc = parana.gr, krige = KC, output = OC) 
+
+
+## Spatial prediction and prediction uncertainty
+image(parana.kc, col = tim.colors(), x.leg = c(560, 780),
+      y.leg = c(500, 550), cex = 0.5, main = "Prediction")
+image(parana.kc, val = sqrt(parana.kc$krige.var), col = tim.colors(),
+      x.leg = c(560, 780), y.leg = c(500, 550), cex = 0.5, main = "Uncertainty")
+```
+
+### Conditional Simulations
+
+```{r,fig.height=4,fig.width=3.5}
+for (i in 1:4){
+  image(parana.kc, val = parana.kc$simulation[, i], col = tim.colors(), 
+      x.leg = c(560, 780), y.leg = c(500, 550), cex = 0.35,
+      main = "", zlim = range(parana.kc$simulation[, 1:4]))
+}
+```
+
+

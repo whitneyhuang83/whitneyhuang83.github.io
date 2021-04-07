@@ -156,7 +156,6 @@ Box.test(ar2.resids, type = "Ljung-Box")
 ## Normal Q-Q plot for the residuals
 qqnorm(ar2.resids, main = ""); qqline(ar2.resids, col = "blue")
 
-
 ## Fit the ARMA(2, 1) model
 (arma21.model <- arima(deTrend, order = c(2, 0, 1)))
 ## calculate the residuals
