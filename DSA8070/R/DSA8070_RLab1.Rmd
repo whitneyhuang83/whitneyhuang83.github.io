@@ -1,0 +1,124 @@
+---
+title: 'DSA 8070 R Lab 1'
+author: "your name"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+colorize <- function(x, color) {
+  if (knitr::is_latex_output()) {
+    sprintf("\\textcolor{%s}{%s}", color, x)
+  } else if (knitr::is_html_output()) {
+    sprintf("<span style='color: %s;'>%s</span>", color,
+      x)
+  } else x
+}
+```
+
+
+## Motor Trend Car Road Tests
+
+
+The data was extracted from the 1974 Motor *Trend US* magazine, and comprises fuel consumption and 10 aspects of automobile design and performance for 32 automobiles.
+You can type `r colorize("? mtcars", "blue")` to learn more about this data set. 
+
+### Load the dataset
+
+**Code:**
+
+```{r}
+data(mtcars)
+```
+
+### Let's take a look at the data
+
+**Code:**
+
+```{r}
+head(mtcars)
+```
+
+In this lab, we will only focus on the following variables:
+
+1. mpg:	Miles/gallon
+2. disp: Displacement (cu.in.)
+3. hp:	Gross horsepower
+4. drat:	Rear axle ratio
+5. wt:	Weight (1000 lbs)
+
+**Code:**
+
+```{r}
+vars <- which(names(mtcars) %in% c("mpg", "disp", "hp", "drat", "wt"))
+```
+
+### Plot the scatterplot matrix
+
+**Code:**
+
+```{r}
+par(las = 1)
+pairs(mtcars[, vars], cex = 0.8, col = "purple")
+```
+
+### Plot the scatterplot matrix using *scatterplotMatrix* function from the *car* library 
+
+**Code:**
+
+```{r}
+
+```
+
+### Plot the scatterplot matrix using *ggpairs* function from the *GGally* library
+
+**Code:**
+
+```{r}
+
+```
+
+## Multivariate Normal Distributions
+
+In this question, we are going to simulate data from bi-variate normal distribution with different correlation coefficients:
+
+### $\rho=0$, that is, these two variables are indepdendent to each other
+
+**Code:**
+
+```{r, message=FALSE}
+library(MASS)
+rho <- 0
+sigma <- 1
+x1 <- mvrnorm(n = 1000, mu = c(0, 0),
+              Sigma = matrix(c(sigma, sigma * rho, sigma * rho, sigma), 2))
+library(GGally)
+ggpairs(data.frame(x1))
+```
+
+### $\rho=0.4$
+
+**Code:**
+
+```{r}
+rho <- 0.4
+
+```
+
+### $\rho=0.9$
+
+**Code:**
+
+```{r}
+rho <- 0.9
+
+```
+
+
+
+
+
