@@ -1,0 +1,198 @@
+---
+title: "Spatial Extremes"
+author: "Whitney Huang"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 8.5
+    fig_height: 6
+    fig_caption: yes
+header-includes:
+   - \usepackage{animate}
+---
+
+**Acknowledgment:** This R session is adopted from Ribatet's short course on "Modelling spatial extremes with the SpatialExtremes package".
+
+## Spatial GEV
+
+### Plot the spatial locations
+
+```{r}
+library(SpatialExtremes)
+data(wind)
+par(mar = rep(0, 4))
+maps::map(xlim = c(0, 9), ylim = c(47.5, 56))
+points(coord, pch = 15, cex = 0.5)
+```
+
+### Fitting spatial GEV
+
+```{r}
+loc.form <- y ~ lon * lat; scale.form <- shape.form <- y ~ 1
+#Convert coordinates from degrees to km (rough)
+coord[, 1:2] <- 111 * coord[, 1:2]
+(M0 <- fitspatgev(wind, scale(coord, scale=FALSE), loc.form, scale.form, shape.form))
+```
+
+### "Prediction"
+
+```{r,message=FALSE}
+library(fields)
+x <- seq(min(coord[,1]), max(coord[,1]), length = 100)
+y <- seq(min(coord[,2]), max(coord[,2]), length = 100)
+grid <- expand.grid(x, y); colnames(grid) <- c("lon", "lat")
+## Watch out we scale the data so we need to use the same transformation 
+grid[,1] <- grid[, 1] - mean(coord[, 1])
+grid[,2] <- grid[, 2] - mean(coord[, 2])
+ans <- predict(M0, newdata = grid, ret.per = 20)$Q20
+## Do the plot
+maps::map(xlim = range(x) / 111, ylim = range(y) / 111)
+image(x / 111, y / 111, matrix(ans, 100), add = TRUE, col = tim.colors(64))
+contour(x / 111, y / 111, matrix(ans, 100), add = TRUE); maps::map(add = TRUE)
+```
+
+## Bayesian Hierarchical Model
+
+### Plot the spatial domain and station locations
+```{r}
+data(rainfall)
+data(swissalt)
+par(mar = rep(0, 4), ps = 16)
+image(lon.vec, lat.vec, alt.mat, col = terrain.colors(64), asp = 1,
+      bty = "n", xlab = "n", ylab = "n", axes = FALSE)
+swiss(add = TRUE, city = TRUE)
+points(coord, pch = 16, cex = 0.75, col = "blue")
+```
+
+### Prior specification
+
+```{r}
+hyper <- list()
+hyper$betaMeans <- list(loc = rep(0, 3), scale = rep(0, 3), shape = 0)
+hyper$betaIcov <- list(loc = diag(rep(1/1000, 3)), scale = diag(rep(1 / 1000, 3)), shape = 1 / 10)
+hyper$sills <- list(loc = c(1, 12), scale = c(1, 1), shape = c(1, 0.04))
+hyper$ranges <- list(loc = c(5, 3), scale = c(5, 3), shape = c(5, 3))
+hyper$smooths <- list(loc = c(1, 1), scale = c(1, 1), shape = c(1, 1))
+prop <- list(gev = c(3, 0.1, 0.3), ranges = c(1, 0.8, 1.2), smooths = rep(0, 3))
+start <- list(sills = c(10, 10, 0.5), ranges = c(20, 10, 10), smooths = c(1, 1, 1), beta = list(loc = c(25, 0, 0), scale = c(33, 0, 0), shape = 0.001))
+```
+
+### Running the Gibbs sampler
+
+```{r}
+loc.form <- scale.form <- y ~ lon + lat; shape.form <- y ~ 1
+chain <- latent(rain, coord[, 1:2], "powexp", loc.form, scale.form, shape.form,
+                hyper = hyper, prop = prop,
+start = start, n = 100, burn.in = 500, thin = 5)
+chain
+```
+
+### Making 20-year return level map
+
+```{r}
+map.latent(chain, ret.per = 20, plot.contour = FALSE, col = tim.colors())
+```
+
+
+## Max-stable processes
+
+### USHCN data
+
+```{r}
+data(USHCNTemp)
+maps::map("usa")
+points(metadata[, c("lon","lat")], pch = 16, cex = 0.75)
+```
+
+### F– madogram
+
+```{r}
+data <- maxima.summer
+coord <- as.matrix(metadata[, c("lon", "lat")])
+fmadogram(data, coord)
+fmadogram(data, coord, which = 'ext', n.bins = 100, pch = 16)
+abline(h = 1, lty = 2); abline(h = 2, lty = 2)
+```
+
+
+### Simulation from various max-stable models
+
+```{r}
+x <- seq(0, 10, length = 100)
+n.sim <- 5
+schlather <- rmaxstab(n.sim, x, "powexp", nugget = 0, range = 3, smooth = 1)
+extremalt <- rmaxstab(n.sim, x, "tpowexp", DoF = 4, nugget = 0, range = 3, smooth = 1)
+brown <- rmaxstab(n.sim, x, "brown", range = 3, smooth = 1)
+smith <- rmaxstab(n.sim, x, "gauss", var = 2)
+
+plot(x, schlather[1,], type = "l", ylim = range(schlather))
+for (i in 2:5) lines(x, schlather[i,], col = i)
+plot(x, smith[1,], type = "l", ylim = range(smith))
+for (i in 2:5) lines(x, smith[i,], col = i)
+```
+
+### Two-step max-stable process fitting
+
+```{r}
+data(rainfall)
+alt <- coord[,3]; coord <- coord[,-3]
+## Transformation to unit Frechet margins
+rain.frech <- apply(rain, 2, gev2frech, emp = TRUE)
+(fit <- fitmaxstab(rain.frech, coord, "powexp", nugget = 0))
+```
+
+### One-step model fitting
+
+```{r}
+loc.form <- y ~ lon + lat + alt
+scale.form <- y ~ lon + lat
+shape.form <- y ~ 1
+(fit <- fitmaxstab(rain, coord, "powexp", nugget=0, loc.form, scale.form, shape.form,
+marg.cov = cbind(alt = alt)))
+plot(fit)
+```
+
+### LRT Model selection 
+
+```{r}
+M0 <- fitmaxstab(rain, coord, "powexp", nugget = 0, locCoeff4 = 0, loc.form, scale.form,
+                 shape.form, marg.cov = cbind(alt = alt))
+M1 <- fitmaxstab(rain, coord, "powexp", nugget = 0,
+loc.form, scale.form, shape.form, marg.cov = cbind(alt = alt))
+anova(M0, M1)
+```
+
+### Model selection via TIC
+
+```{r}
+M1 <- fitmaxstab(rain, coord, "powexp", nugget = 0, loc.form, scale.form, shape.form,
+                 marg.cov = cbind(alt = alt))
+M2 <- fitmaxstab(rain, coord, "whitmat", loc.form, scale.form,
+                 shape.form, marg.cov = cbind(alt = alt))
+TIC(M1, M2)
+```
+
+### Parameters and return level maps
+
+```{r}
+xlim <- range(M2$coord[,1]); ylim <- range(M2$coord[,2])
+data(swissalt)##Retrieve altitude at other places
+idx.x <- which(lon.vec >= xlim[1] & lon.vec <= xlim[2])
+idx.y <- which(lat.vec >= ylim[1] & lat.vec <= ylim[2])
+x <- lon.vec[idx.x]; y <- lat.vec[idx.y]
+n.x <- length(x); n.y <- length(y)
+covariates <- array(alt.mat[idx.x, idx.y], dim = c(n.x, n.y, 1), dimnames = list(NULL, NULL, "alt"))
+covariates[is.na(covariates)] <- 0
+par(mar = rep(0, 4), mfrow = c(1, 3))
+SpatialExtremes::map(M2, x, y, covariates, param = "loc",
+                     xaxt = "n", yaxt = "n", col = tim.colors()); swiss(add = TRUE)
+SpatialExtremes::map(M2, x, y, covariates, param = "scale",
+                     xaxt = "n", yaxt = "n", col = tim.colors()); swiss(add = TRUE)
+SpatialExtremes::map(M2, x, y, covariates, param = "quant", ret.per = 20,
+                     xaxt = "n", yaxt = "n", col = tim.colors()); swiss(add = TRUE)
+```
+
+
+
