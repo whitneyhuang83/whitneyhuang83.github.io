@@ -1,0 +1,212 @@
+---
+title: "DSA 8020 R Session 4: Multiple Linear Regression III"
+author: "Whitney"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    fig_width: 7
+    fig_height: 6.5
+    fig_caption: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Bias And Variance
+
+```{r}
+set.seed(123)
+x <- sort(-10 + 20 * runif(100))
+z <- 10 + 2 * x + x^2
+set.seed(1234)
+err <- replicate(500, rnorm(100, 0, 5))
+y <- z + err
+
+layout(matrix(c(1,1,2,3), 4, 1, byrow = TRUE))
+par(las = 1, mar = c(3.5, 3.5, 0.5, 0.5), mgp = c(2, 0.5, 0))
+plot(x, z, type = "l", ylab = "y", lwd = 1.5)
+points(x, y[, 5], pch = 16, col = "gray")
+grid()
+lm <- apply(y, 2, function(z) lm(z ~ x))
+lines(x, lm[[5]]$fitted.values, col = "red", lwd = 1.2)
+qm <- apply(y, 2, function(z) lm(z ~ poly(x, 25)))
+lines(x, qm[[5]]$fitted.values, col = "blue", lwd = 1.2)
+legend("topleft", legend = c("True", "Obs", "Ubderfit", "Overfit"),
+       col = c("black", "gray", "red", "blue"),
+       lty = c(1, NA, 1, 1), pch = c(NA, 16, NA, NA),
+       bty = "n")
+
+lmpred <- array(unlist(lapply(lm, predict)), dim = c(100, 500))
+qmpred <- array(unlist(lapply(qm, predict)), dim = c(100, 500))
+bias_lm <- apply(lmpred, 1, mean) - z 
+bias_qm <- apply(qmpred, 1, mean) - z 
+plot(x, bias_lm, col = "red", type = "l", ylab = "Bias")
+lines(x, bias_qm, col = "blue")
+abline(h = 0, lty = 2)
+var_lm <- apply(lmpred, 1, var)
+var_qm <- apply(qmpred, 1, var)
+plot(x, sqrt(var_qm), col = "blue", ylim = c(0, max(sqrt(var_qm))), type = "l",
+     ylab = "Std")
+lines(x, sqrt(var_lm), col = "red")
+```
+
+
+
+## Model Selection
+
+### load the data
+
+```{r}
+library(faraway)
+data(gala)
+galaNew <- gala[, -2]
+```
+
+
+### Best Subset Selection
+
+```{r, message=FALSE}
+#install.packages(c("tidyverse", "caret", "leaps"))
+library(tidyverse)
+library(caret)
+library(leaps)
+models <- regsubsets(Species ~ ., data = galaNew)
+summary(models)
+
+res.sum <- summary(models)
+
+criteria <- data.frame(
+  Adj.R2 = res.sum$adjr2,
+  Cp = res.sum$cp,
+  BIC = res.sum$bic)
+
+criteria
+
+plot(2:6, criteria$Cp, las = 1, xlab = "p", ylab = "Cp",
+     pch = 16, col = "gray", ylim = c(1, max(criteria$Cp)))
+abline(0, 1)
+
+plot(2:6, criteria$Adj.R2, las = 1, xlab = "p", ylab = "", pch = 16, col = "gray",
+     main = expression(R['adj']^2))
+points(5, criteria$Adj.R2[4], col = "blue", pch = 16)
+
+plot(2:6, criteria$BIC, las = 1, xlab = "p", ylab = "", pch = 16, col = "gray", main = "BIC")
+points(3, criteria$BIC[2], col = "blue", pch = 16)
+```
+
+### Backward Selection
+
+```{r}
+full <- lm(Species ~ ., data = galaNew)
+step(full, direction = "backward")
+```
+
+### Stepwise Selection
+
+```{r}
+step(full, direction = "both")
+```
+
+## Model Diagnostics
+
+### Residual Plot
+
+```{r}
+mod <- lm(Species ~ Elevation + Adjacent, data = galaNew)
+plot(mod$fitted.values, mod$residuals, pch = 16, col = "blue")
+abline(h = 0, col = "red")
+```
+
+### Residual Histogram/QQplot
+
+```{r}
+(sd <- sd(mod$residuals))
+
+par(las = 1)
+hist(mod$residuals, 5, prob = T, col = "lightblue", border = "gray")
+xg <- seq(-200, 200, 1)
+yg <- dnorm(xg, 0, sd)
+lines(xg, yg)
+
+plot(qnorm(1:30 / 31, 0, sd), sort(mod$residuals), pch = 16,
+     col = "gray", xlab = "Normal Quantiles", ylab = "Residuals")
+abline(0, 1)
+```
+
+### Leverage
+
+```{r}
+step_gala <- step(full, trace = F)
+X <- model.matrix(step_gala)
+H <- X %*% solve((t(X) %*% X)) %*% t(X)
+lev <- hat(X)
+high_lev <- which(lev >= 2 * 3 / 30)
+attach(gala)
+par(las = 1)
+plot(Elevation, Adjacent, cex = sqrt(5 * lev), col = "blue", ylim = c(0, 5000))
+points(Elevation[high_lev], Adjacent[high_lev], col = "red", pch = 16,
+       cex = sqrt(5 *lev[high_lev]))
+```
+
+### Studentized Residuals
+
+```{r}
+gs <- summary(step_gala)
+gs$sig
+studRes <- gs$res / (gs$sig * sqrt(1 - lev))
+
+par(las = 1)
+plot(step_gala$fitted.values, studRes, pch = 16, col = "blue",
+     ylab = expression(r[i]), main = "Studentized Residuals", xlab = "")
+abline(h = 0, lty = 2, col = "gray")
+```
+
+
+### Jackknife Residuals
+
+```{r}
+jack <- rstudent(step_gala)
+
+par(las = 1)
+plot(jack, pch = 16, cex = 0.8, col = "blue", main =" Jacknife Residuals ",
+     xlab = "", ylab = "")
+abline(h = 0, lty = 2, col = "gray")
+```
+
+
+### Identifying Influential Observations: DFFITS
+```{r, message=F}
+library(olsrr)
+ols_plot_dffits(step_gala)
+```
+
+
+### Transformation
+
+```{r}
+par(las = 1)
+plot(step_gala$fitted.values, step_gala$residuals, 
+     pch = 16, cex = 0.8, col = "blue", main =" Residuals ",
+     xlab = expression(hat(Y)), ylab = expression(e))
+abline(h = 0, lty = 2, col = "gray")
+
+sqrt_fit <- lm(sqrt(Species) ~ Elevation + Adjacent)
+
+par(las = 1)
+plot(sqrt_fit$fitted.values, sqrt_fit$residuals, 
+     pch = 16, cex = 0.8, col = "blue", main =" Residuals ",
+     xlab = expression(hat(Y)), ylab = expression(e))
+abline(h = 0, lty = 2, col = "gray")
+```
+
+### Box-Cox Transformation
+
+```{r}
+library(MASS)
+boxcox <- boxcox(step_gala, plotit = T,
+                 lambda = seq(-0.25, 0.75, by = 0.05))
+```
+
