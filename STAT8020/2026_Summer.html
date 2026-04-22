@@ -334,6 +334,15 @@
 Page generated <span id="last-modified"></span>, by <a href="http://jemdoc.jaboc.net/">jemdoc</a>.
 </div>
 </div>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  var el = document.getElementById("last-modified");
+  if (el) {
+    el.textContent = new Date(document.lastModified).toLocaleString();
+  }
+});
+</script>
+	
 </td>
 </tr>
 </table>
