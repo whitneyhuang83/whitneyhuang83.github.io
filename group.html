@@ -5,8 +5,74 @@
 <meta name="generator" content="jemdoc, see http://jemdoc.jaboc.net/" />
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <link rel="stylesheet" href="jemdoc.css" type="text/css" />
+
+<style>
+
+.student-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+    padding: 24px 0;
+    border-bottom: 1px solid #dddddd;
+}
+
+.student-photo {
+    flex: 0 0 135px;
+}
+
+.student-photo img {
+    width: 135px;
+    height: 165px;
+    object-fit: cover;
+    object-position: center top;
+    border-radius: 6px;
+    border: 1px solid #dddddd;
+    box-shadow: 0 2px 7px rgba(0,0,0,0.10);
+}
+
+.student-info {
+    flex: 1;
+}
+
+.student-info h2 {
+    margin: 0 0 4px 0;
+    padding: 0;
+    font-size: 1.30em;
+    border-bottom: none;
+}
+
+.student-degree {
+    color: #666666;
+    font-size: 0.95em;
+    margin-bottom: 11px;
+}
+
+.student-thesis,
+.student-position {
+    margin: 7px 0;
+    line-height: 1.55;
+}
+
+@media only screen and (max-width: 650px) {
+    .student-card {
+        gap: 16px;
+    }
+
+    .student-photo {
+        flex: 0 0 95px;
+    }
+
+    .student-photo img {
+        width: 95px;
+        height: 120px;
+    }
+}
+
+</style>
+
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">	
+
+	
 <title>Former and Current Group Memebers</title>
 </head>
 <body>
@@ -34,89 +100,271 @@
 <td id="layout-content">
 	
 <h1>Current and Former Students</h1>
-<ul>
-  <li>
-    <p>
-      <a href="https://www.linkedin.com/in/kkreuser/">Katherine Kreuser</a>,
-      PhD, December 2025,
-      &ldquo;Uncertainty Quantification in Extreme Value Modeling, Online Optimization, and Bias Correction&rdquo;.
-      <strong>Current Position:</strong> Postdoctoral Fellow, Los Alamos National Laboratory
-    </p>
-  </li>
 
-  <li>
-    <p>
-      <a href="https://www.linkedin.com/in/joyce-huang-853b81b1/">Jiyun (Joyce) Huang</a>
-      (joint with Brook Russell),
-      PhD, December 2025,
-      &ldquo;Contributions to Statistical Modeling and Estimation of Rainfall Intensity-Duration-Frequency Curves&rdquo;.
-      <strong>Current Position:</strong> Assistant Professor of Statistics, Department of Mathematics and Statistics,
-      University of North Florida
-    </p>
-  </li>
+<p class="group-intro">
+  I have been fortunate to work with an outstanding group of students
+  on statistical methodology and applications in environmental,
+  climate, and risk sciences.
+</p>
 
-  <li>
-    <p>
-      <a href="https://www.linkedin.com/in/fnu-kamronnaher-a855b6126/">Fnu Kamronnaher</a>
-      PhD, December 2023,
-      &ldquo;Estimating Financial and Environmental Risk: Some New Developments and a Comparative Study&rdquo;.
-      <strong>Current Position:</strong> Visiting Assistant Professor,
-      Management, Information Systems and Quantitative Methods,
-      University of Alabama at Birmingham
-    </p>
-  </li>
+<div class="student-list">
 
-  <li>
-    <p>
-      <a href="https://evamurphy100.github.io/">Eva Murphy</a>
-      PhD, August 2023,
-      &ldquo;A Framework for Statistical Modeling of Wind Speed and Wind Direction&rdquo;.
-      <strong>Current Position:</strong> Postdoctoral Fellow,
-      Department of Statistical Sciences,
-      Wake Forest University, Winston-Salem, NC
-    </p>
-  </li>
+  <!-- Katherine Kreuser -->
+  <div class="student-card">
+    <div class="student-photo">
+      <img src="images/group/katherine_kreuser.jpg"
+           alt="Katherine Kreuser" />
+    </div>
 
-  <li>
-    <p>
-      Peiying Li
-      MS, May 2024,
-      &ldquo;Estimating Financial Value-at-Risk via GARCH and LSTM Models&rdquo;.
-      <strong>Current Position:</strong> Banking industry, China
-    </p>
-  </li>
+    <div class="student-info">
+      <h2>
+        <a href="https://www.linkedin.com/in/kkreuser/">
+          Katherine Kreuser
+        </a>
+      </h2>
 
-  <li>
-    <p>
-      Adam Diaz
-      MS, May 2022,
-      &ldquo;A Contribution to the Statistical Analysis of Climate–Wildfire Interaction in Northern California&rdquo;
-      <a href="https://tigerprints.clemson.edu/all_theses/3765/">[Link]</a>.
-      <strong>Current Position:</strong> Principal Research Statistician,
-      Northern California Institute for Research and Education,
-      San Francisco, CA
-    </p>
-  </li>
+      <div class="student-degree">
+        PhD, December 2025
+      </div>
 
-  <li>
-    <p>
-      <a href="https://www.linkedin.com/in/emily-tidwell-099a1b204/">Emily Tidwell</a>
-      MS, May 2021,
-      &ldquo;A Combined Physical–Statistical Approach for Estimating r-Year Storm Surge Depth&rdquo;.
-      <strong>Current Position:</strong> Dynetics, Huntsville, AL
-    </p>
-  </li>
+      <p class="student-thesis">
+        <strong>Dissertation:</strong>
+        &ldquo;Uncertainty Quantification in Extreme Value Modeling,
+        Online Optimization, and Bias Correction&rdquo;
+      </p>
 
-  <li>
-    <p>
-      <a href="https://www.linkedin.com/in/andrew-bellucco/">Andrew Bellucco</a>
-      MS, December 2019, co-advised with <a href="Colin Gallagher">Colin Gallagher</a>,
-      &ldquo;Estimating Financial Risk&rdquo;.
-      <strong>Current Position:</strong> Senior Partnerships Lead,
-      Yendo, Charlotte, NC
-    </p>
-  </li>
-</ul>
+      <p class="student-position">
+        <strong>Current Position:</strong>
+        Postdoctoral Fellow, Los Alamos National Laboratory
+      </p>
+    </div>
+  </div>
+
+
+  <!-- Joyce Huang -->
+  <div class="student-card">
+    <div class="student-photo">
+      <img src="images/group/joyce_huang.jpg"
+           alt="Jiyun Joyce Huang" />
+    </div>
+
+    <div class="student-info">
+      <h2>
+        <a href="https://www.linkedin.com/in/joyce-huang-853b81b1/">
+          Jiyun (Joyce) Huang
+        </a>
+      </h2>
+
+      <div class="student-degree">
+        PhD, December 2025 &middot; Joint with Brook Russell
+      </div>
+
+      <p class="student-thesis">
+        <strong>Dissertation:</strong>
+        &ldquo;Contributions to Statistical Modeling and Estimation
+        of Rainfall Intensity-Duration-Frequency Curves&rdquo;
+      </p>
+
+      <p class="student-position">
+        <strong>Current Position:</strong>
+        Adjunct Faculty, Department of Mathematics and Statistics,
+        University of North Florida
+      </p>
+    </div>
+  </div>
+
+
+  <!-- Fnu Kamronnaher -->
+  <div class="student-card">
+    <div class="student-photo">
+      <img src="images/group/fnu_kamronnaher.jpg"
+           alt="Fnu Kamronnaher" />
+    </div>
+
+    <div class="student-info">
+      <h2>
+        <a href="https://www.linkedin.com/in/fnu-kamronnaher-a855b6126/">
+          Fnu Kamronnaher
+        </a>
+      </h2>
+
+      <div class="student-degree">
+        PhD, December 2023
+      </div>
+
+      <p class="student-thesis">
+        <strong>Dissertation:</strong>
+        &ldquo;Estimating Financial and Environmental Risk:
+        Some New Developments and a Comparative Study&rdquo;
+      </p>
+
+      <p class="student-position">
+        <strong>Current Position:</strong>
+        Visiting Assistant Professor,
+        Management, Information Systems and Quantitative Methods,
+        University of Alabama at Birmingham
+      </p>
+    </div>
+  </div>
+
+
+  <!-- Eva Murphy -->
+  <div class="student-card">
+    <div class="student-photo">
+      <img src="images/group/eva_murphy.jpg"
+           alt="Eva Murphy" />
+    </div>
+
+    <div class="student-info">
+      <h2>
+        <a href="https://evamurphy100.github.io/">
+          Eva Murphy
+        </a>
+      </h2>
+
+      <div class="student-degree">
+        PhD, August 2023
+      </div>
+
+      <p class="student-thesis">
+        <strong>Dissertation:</strong>
+        &ldquo;A Framework for Statistical Modeling of Wind Speed
+        and Wind Direction&rdquo;
+      </p>
+
+      <p class="student-position">
+        <strong>Current Position:</strong>
+        Postdoctoral Fellow, Department of Statistical Sciences,
+        Wake Forest University, Winston-Salem, NC
+      </p>
+    </div>
+  </div>
+
+
+  <!-- Peiying Li -->
+  <div class="student-card">
+    <div class="student-photo">
+      <img src="images/group/peiying_li.jpg"
+           alt="Peiying Li" />
+    </div>
+
+    <div class="student-info">
+      <h2>Peiying Li</h2>
+
+      <div class="student-degree">
+        MS, May 2024
+      </div>
+
+      <p class="student-thesis">
+        <strong>Thesis:</strong>
+        &ldquo;Estimating Financial Value-at-Risk via GARCH
+        and LSTM Models&rdquo;
+      </p>
+
+      <p class="student-position">
+        <strong>Current Position:</strong>
+        Banking industry, China
+      </p>
+    </div>
+  </div>
+
+
+  <!-- Adam Diaz -->
+  <div class="student-card">
+    <div class="student-photo">
+      <img src="images/group/adam_diaz.jpg"
+           alt="Adam Diaz" />
+    </div>
+
+    <div class="student-info">
+      <h2>Adam Diaz</h2>
+
+      <div class="student-degree">
+        MS, May 2022
+      </div>
+
+      <p class="student-thesis">
+        <strong>Thesis:</strong>
+        &ldquo;A Contribution to the Statistical Analysis of
+        Climate&ndash;Wildfire Interaction in Northern California&rdquo;
+        <a href="https://tigerprints.clemson.edu/all_theses/3765/">
+          [Thesis]
+        </a>
+      </p>
+
+      <p class="student-position">
+        <strong>Current Position:</strong>
+        Principal Research Statistician,
+        Northern California Institute for Research and Education,
+        San Francisco, CA
+      </p>
+    </div>
+  </div>
+
+
+  <!-- Emily Tidwell -->
+  <div class="student-card">
+    <div class="student-photo">
+      <img src="images/group/emily_tidwell.jpg"
+           alt="Emily Tidwell" />
+    </div>
+
+    <div class="student-info">
+      <h2>
+        <a href="https://www.linkedin.com/in/emily-tidwell-099a1b204/">
+          Emily Tidwell
+        </a>
+      </h2>
+
+      <div class="student-degree">
+        MS, May 2021
+      </div>
+
+      <p class="student-thesis">
+        <strong>Thesis:</strong>
+        &ldquo;A Combined Physical&ndash;Statistical Approach for
+        Estimating r-Year Storm Surge Depth&rdquo;
+      </p>
+
+      <p class="student-position">
+        <strong>Current Position:</strong>
+        Dynetics, Huntsville, AL
+      </p>
+    </div>
+  </div>
+
+
+  <!-- Andrew Bellucco -->
+  <div class="student-card">
+    <div class="student-photo">
+      <img src="images/group/andrew_bellucco.jpg"
+           alt="Andrew Bellucco" />
+    </div>
+
+    <div class="student-info">
+      <h2>
+        <a href="https://www.linkedin.com/in/andrew-bellucco/">
+          Andrew Bellucco
+        </a>
+      </h2>
+
+      <div class="student-degree">
+        MS, December 2019 &middot; Co-advised with Colin Gallagher
+      </div>
+
+      <p class="student-thesis">
+        <strong>Thesis:</strong>
+        &ldquo;Estimating Financial Risk&rdquo;
+      </p>
+
+      <p class="student-position">
+        <strong>Current Position:</strong>
+        Senior Partnerships Lead, Yendo, Charlotte, NC
+      </p>
+    </div>
+  </div>
+
+</div>
 
 <div id="footer">
 <div id="footer-text">
